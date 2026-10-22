@@ -39,6 +39,10 @@ export default {
     'Lunch': 'Обед',
     'Dinner': 'Ужин',
     'Snack': 'Перекус',
+    'Breakfast@short': 'Завтрак',
+    'Lunch@short': 'Обед',
+    'Dinner@short': 'Ужин',
+    'Snack@short': 'Перекус',
 
     // Macros
     'Protein': 'Белки',
@@ -83,6 +87,10 @@ export default {
     'Lunch': 'Tushlik',
     'Dinner': 'Kechki ovqat',
     'Snack': 'Perekus',
+    'Breakfast@short': 'Nonushta',
+    'Lunch@short': 'Tushlik',
+    'Dinner@short': 'Kechki',
+    'Snack@short': 'Perekus',
 
     // Macros
     'Protein': 'Oqsil',

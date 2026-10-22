@@ -25,6 +25,22 @@ export default {
     'Copied {n} items from yesterday': ['Со вчера скопирован {n} продукт', 'Со вчера скопировано {n} продукта', 'Со вчера скопировано {n} продуктов'],
     'Nothing logged yesterday': 'Вчера ничего не записано',
 
+    // Browse by category
+    'Categories': 'Категории',
+    'My foods': 'Мои продукты',
+    'Recipes': 'Рецепты',
+    'Meat & fish': 'Мясо и рыба',
+    'Eggs & dairy': 'Яйца и молочное',
+    'Grains & starches': 'Крупы и хлеб',
+    'Legumes & tofu': 'Бобовые и тофу',
+    'Fruit': 'Фрукты',
+    'Vegetables': 'Овощи',
+    'Nuts, oils & sweets': 'Орехи, масла и сладкое',
+    'Drinks': 'Напитки',
+    'You haven’t created any foods yet.': 'Своих продуктов пока нет.',
+    'No recipes yet. Combine foods into a recipe to log it in one tap.': 'Рецептов пока нет. Собери продукты в рецепт — и записывай его в одно касание.',
+    'Nothing here yet.': 'Здесь пока пусто.',
+
     // Log sheet & quick add
     'Added to {meal}': 'Добавлено в {meal}',
     'Remove {name}?': 'Удалить «{name}»?',
@@ -145,6 +161,22 @@ export default {
     'Copy all of yesterday': 'Kechagi hamma ovqatni nusxalash',
     'Copied {n} items from yesterday': 'Kechadan {n} ta mahsulot nusxalandi',
     'Nothing logged yesterday': 'Kecha hech narsa yozilmagan',
+
+    // Browse by category
+    'Categories': 'Toifalar',
+    'My foods': 'Mening mahsulotlarim',
+    'Recipes': 'Retseptlar',
+    'Meat & fish': 'Go‘sht va baliq',
+    'Eggs & dairy': 'Tuxum va sut mahsulotlari',
+    'Grains & starches': 'Don va non',
+    'Legumes & tofu': 'Dukkaklilar va tofu',
+    'Fruit': 'Mevalar',
+    'Vegetables': 'Sabzavotlar',
+    'Nuts, oils & sweets': 'Yong‘oq, yog‘ va shirinliklar',
+    'Drinks': 'Ichimliklar',
+    'You haven’t created any foods yet.': 'Hali o‘zingizning mahsulotlaringiz yo‘q.',
+    'No recipes yet. Combine foods into a recipe to log it in one tap.': 'Hali retsept yo‘q. Mahsulotlarni retseptga jamlang — keyin bir bosishda yozasiz.',
+    'Nothing here yet.': 'Hozircha bo‘sh.',
 
     // Log sheet & quick add
     'Added to {meal}': 'Qo‘shildi: {meal}',

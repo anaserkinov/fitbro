@@ -7,6 +7,7 @@ import { today } from './users.js';
 import { gramsFor, nutrientsFor, sumNutrients, recipePer100 } from './nutrition.js';
 import { lookupBarcode as offLookup, cleanBarcode } from './openfoodfacts.js';
 import { catalogName, catalogSearch } from './i18n/catalog.js';
+import { FOOD_CATEGORIES, BUILTIN_FOOD_CATEGORY } from './data/foods.js';
 
 const F = T.foods, FL = T.foodLogs, WL = T.waterLogs, FAV = T.favoriteFoods, RI = T.recipeItems;
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -50,10 +51,38 @@ const SOURCE_RANK = { custom: 0, recipe: 0, builtin: 1, off: 2 };
 
 // No query: recent and favourite foods. With a query: name matches, the user's own
 // foods first, then names that start with the query, then shorter names.
+// Browse groups: the built-in categories plus the user's own foods and recipes.
+export const BROWSE = ['mine', 'recipes', ...FOOD_CATEGORIES];
+
+const categoryOf = (f) => (f.source === 'builtin' ? BUILTIN_FOOD_CATEGORY[f.name] ?? null : null);
+
+function inGroup(f, group) {
+  if (group === 'mine') return f.source === 'custom';
+  if (group === 'recipes') return f.source === 'recipe';
+  return categoryOf(f) === group;
+}
+
+const browseGroup = (x, k) => (BROWSE.includes(x) ? x : v.invalid(`${k} must be one of: ${BROWSE.join(', ')}`, k));
+
+// Every food in one group, by name in the user's language.
+export async function browseFoods(user, input = {}) {
+  const group = browseGroup(input.category, 'category');
+  const favs = await favoriteIds(user.id);
+  const live = isNull(F.archivedAt);
+  const where = group === 'mine' ? and(live, eq(F.userId, user.id), eq(F.source, 'custom'))
+    : group === 'recipes' ? and(live, eq(F.userId, user.id), eq(F.source, 'recipe'))
+    : and(live, eq(F.userId, 0), eq(F.source, 'builtin'), inArray(F.name, Object.keys(BUILTIN_FOOD_CATEGORY).filter((n) => BUILTIN_FOOD_CATEGORY[n] === group)));
+  const shown = (f) => (f.source === 'builtin' ? catalogName(user.language, f.name) : f.name);
+  const rows = (await db.select().from(F).where(where).all())
+    .sort((a, b) => shown(a).localeCompare(shown(b), user.language));
+  return { category: group, foods: rows.map((f) => ({ ...f, category: categoryOf(f), favorite: favs.has(f.id), custom: f.userId !== 0 })) };
+}
+
 export async function searchFoods(user, input = {}) {
   const q = v.str(input.q, 'q', { max: 60, optional: true });
+  const group = input.category == null ? null : browseGroup(input.category, 'category');
   const favs = await favoriteIds(user.id);
-  const mark = (f) => ({ ...f, favorite: favs.has(f.id), custom: f.userId !== 0 });
+  const mark = (f) => ({ ...f, category: categoryOf(f), favorite: favs.has(f.id), custom: f.userId !== 0 });
   const live = and(inArray(F.userId, [0, user.id]), isNull(F.archivedAt));
 
   if (!q) {
@@ -81,7 +110,7 @@ export async function searchFoods(user, input = {}) {
     const sa = score(a), sb = score(b);
     return sa[0] - sb[0] || sa[1] - sb[1] || sa[2] - sb[2];
   });
-  return { results: rows.slice(0, 30).map(mark) };
+  return { results: rows.filter((f) => !group || inGroup(f, group)).slice(0, 30).map(mark) };
 }
 
 export async function getFood(user, input) {

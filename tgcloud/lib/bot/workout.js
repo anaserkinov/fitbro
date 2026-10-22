@@ -8,6 +8,7 @@ import { describePr } from '../strength.js';
 import { formatWeight, formatDuration, fromKg, toKg, round, thousands, unitLabel } from '../units.js';
 import { tr } from '../i18n/bot.js';
 import { catalogName } from '../i18n/catalog.js';
+import { nextOpenSet, blocks } from '../supersets.js';
 import { send, edit, inline, appButton, esc } from './ui.js';
 
 // The chat workout card: one message showing the next set, edited in place as you
@@ -50,7 +51,9 @@ export async function renderCard(user, workoutId, note = '') {
   if (!w || w.endedAt) return null;
   const open = (e) => e.sets.some((s) => !s.completed);
   const focusId = user.botState && user.botState.focusWe;
-  const ex = d.exercises.find((e) => e.id === focusId && open(e)) || d.exercises.find(open);
+  // A picked exercise ("Next exercise") wins; otherwise the next set in order —
+  // which alternates between the exercises of a superset.
+  const ex = d.exercises.find((e) => e.id === focusId && open(e)) || nextOpenSet(d.exercises)?.exercise;
   const all = d.exercises.flatMap((e) => e.sets.filter((s) => s.setType !== 'warmup'));
   const minutes = Math.max(0, Math.round((Date.now() - w.startedAt.getTime()) / 60000));
   const lines = [`🏋️ <b>${esc(w.name)}</b> · ${minutes} ${t('min')} · ${t('{done}/{total} sets', { done: all.filter((s) => s.completed).length, total: all.length })}`];
@@ -66,7 +69,11 @@ export async function renderCard(user, workoutId, note = '') {
   const set = ex.sets.find((s) => !s.completed);
   const n = working.indexOf(set) + 1;
   const prev = ex.previous.filter((p) => p.setType !== 'warmup');
-  lines.push('', `<b>${esc(catalogName(user.language, ex.exercise.name))}</b> — ${set.setType === 'warmup' ? t('warm-up') : t('set {n} of {total}', { n, total: working.length })}`);
+  const label = set.setType === 'warmup' ? t('warm-up') : set.setType === 'drop' ? t('drop set') : t('set {n} of {total}', { n, total: working.length });
+  const superset = blocks(d.exercises).find((b) => b.exercises.includes(ex));
+  lines.push('');
+  if (superset.group !== null) lines.push(`🔁 ${t('Superset')}: ${superset.exercises.map((e) => esc(catalogName(user.language, e.exercise.name))).join(' + ')}`);
+  lines.push(`<b>${esc(catalogName(user.language, ex.exercise.name))}</b> — ${label}`);
   if (prev.length) lines.push(`${t('Last time')}: ${prev.map((p) => setText(p, track, user)).join(', ')}`);
   lines.push(`▶️ <b>${setText(set, track, user)}</b>`);
   if (note) lines.push('', note);

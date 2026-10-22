@@ -2,10 +2,11 @@
 // drinks), typical figures in line with USDA FoodData Central — good enough for
 // tracking; packaged products come from Open Food Facts by barcode instead.
 //
-// [name, baseUnit, kcal, protein, carbs, fat, servingLabel, servingGrams]
+// [name, baseUnit, kcal, protein, carbs, fat, servingLabel, servingGrams]; a string
+// starts a category (what the Mini App browses by).
 
 const ROWS = [
-  // Meat & fish (cooked unless noted)
+  'meat_fish',     // Meat & fish (cooked unless noted)
   ['Chicken breast, cooked',       'g', 165, 31,   0,    3.6,  null, null],
   ['Chicken breast, raw',          'g', 120, 22.5, 0,    2.6,  null, null],
   ['Chicken thigh, cooked',        'g', 209, 26,   0,    10.9, null, null],
@@ -19,7 +20,7 @@ const ROWS = [
   ['Cod, cooked',                  'g', 105, 23,   0,    0.9,  null, null],
   ['Shrimp, cooked',               'g', 99,  24,   0.2,  0.3,  null, null],
 
-  // Eggs & dairy
+  'dairy',         // Eggs & dairy
   ['Egg, whole',                   'g', 143, 12.6, 0.7,  9.5,  '1 large', 50],
   ['Egg white',                    'g', 52,  11,   0.7,  0.2,  '1 large', 33],
   ['Greek yogurt 0%',              'g', 59,  10.3, 3.6,  0.4,  '1 cup', 170],
@@ -33,7 +34,7 @@ const ROWS = [
   ['Butter',                       'g', 717, 0.9,  0.1,  81,   '1 tbsp', 14],
   ['Whey protein powder',          'g', 400, 80,   8,    6,    '1 scoop', 30],
 
-  // Grains & starches
+  'grains',        // Grains & starches
   ['Oats, rolled (dry)',           'g', 379, 13,   68,   6.5,  null, null],
   ['White rice, cooked',           'g', 130, 2.7,  28,   0.3,  '1 cup', 158],
   ['Brown rice, cooked',           'g', 123, 2.7,  25.6, 1,    '1 cup', 195],
@@ -48,14 +49,14 @@ const ROWS = [
   ['Granola',                      'g', 471, 10,   64,   20,   null, null],
   ['Rice cake',                    'g', 387, 8,    82,   2.8,  '1 cake', 9],
 
-  // Legumes & plant protein
+  'legumes',       // Legumes & plant protein
   ['Lentils, cooked',              'g', 116, 9,    20,   0.4,  '1 cup', 198],
   ['Chickpeas, cooked',            'g', 164, 8.9,  27.4, 2.6,  '1 cup', 164],
   ['Black beans, cooked',          'g', 132, 8.9,  23.7, 0.5,  '1 cup', 172],
   ['Tofu, firm',                   'g', 144, 17.3, 2.8,  8.7,  null, null],
   ['Hummus',                       'g', 166, 7.9,  14.3, 9.6,  '2 tbsp', 30],
 
-  // Fruit
+  'fruit',         // Fruit
   ['Banana',                       'g', 89,  1.1,  23,   0.3,  '1 medium', 118],
   ['Apple',                        'g', 52,  0.3,  14,   0.2,  '1 medium', 182],
   ['Orange',                       'g', 47,  0.9,  12,   0.1,  '1 medium', 131],
@@ -64,7 +65,7 @@ const ROWS = [
   ['Grapes',                       'g', 69,  0.7,  18,   0.2,  '1 cup', 151],
   ['Avocado',                      'g', 160, 2,    8.5,  14.7, '1 medium', 150],
 
-  // Vegetables
+  'vegetables',    // Vegetables
   ['Broccoli, cooked',             'g', 35,  2.4,  7.2,  0.4,  '1 cup', 156],
   ['Spinach, raw',                 'g', 23,  2.9,  3.6,  0.4,  '1 cup', 30],
   ['Green beans, cooked',          'g', 35,  1.9,  7.9,  0.3,  '1 cup', 125],
@@ -74,7 +75,7 @@ const ROWS = [
   ['Red bell pepper',              'g', 31,  1,    6,    0.3,  '1 medium', 119],
   ['Onion',                        'g', 40,  1.1,  9.3,  0.1,  '1 medium', 110],
 
-  // Nuts, fats & sweets
+  'fats_sweets',   // Nuts, fats & sweets
   ['Peanut butter',                'g', 588, 25,   20,   50,   '1 tbsp', 16],
   ['Almonds',                      'g', 579, 21,   22,   50,   '1 handful', 28],
   ['Walnuts',                      'g', 654, 15,   14,   65,   '1 handful', 28],
@@ -83,15 +84,28 @@ const ROWS = [
   ['Honey',                        'g', 304, 0.3,  82,   0,    '1 tbsp', 21],
   ['Dark chocolate 70–85%',        'g', 598, 7.8,  46,   43,   '1 square', 10],
 
-  // Drinks
+  'drinks',        // Drinks
   ['Orange juice',                 'ml', 45, 0.7,  10.4, 0.2,  '1 glass', 250],
   ['Cola',                         'ml', 42, 0,    10.6, 0,    '1 can', 330],
   ['Beer',                         'ml', 43, 0.5,  3.6,  0,    '1 bottle', 500],
   ['Coffee, black',                'ml', 1,  0.1,  0,    0,    '1 cup', 240],
 ];
 
-export const BUILTIN_FOODS = ROWS.map(([name, baseUnit, kcal, protein, carbs, fat, servingLabel, servingGrams]) => ({
+export const FOOD_CATEGORIES = ROWS.filter((r) => typeof r === 'string');
+
+const FOOD_ROWS = ROWS.filter((r) => typeof r !== 'string');
+
+export const BUILTIN_FOODS = FOOD_ROWS.map(([name, baseUnit, kcal, protein, carbs, fat, servingLabel, servingGrams]) => ({
   name, baseUnit,
   kcalPer100: kcal, proteinPer100: protein, carbsPer100: carbs, fatPer100: fat,
   servingLabel, servingGrams,
 }));
+
+// Built-in food name → category. Kept out of the table: it's derived from this file,
+// so recategorising never needs a migration.
+export const BUILTIN_FOOD_CATEGORY = {};
+let current = null;
+for (const r of ROWS) {
+  if (typeof r === 'string') current = r;
+  else BUILTIN_FOOD_CATEGORY[r[0]] = current;
+}

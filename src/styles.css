@@ -155,11 +155,17 @@ button.row:active, .row.tap:active { background: var(--field); }
 .badge.gray { background: var(--field); color: var(--hint); font-weight: 600; }
 .badge.green { background: var(--good-soft); color: var(--good); }
 
-.segmented { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 2px; padding: 2px; border-radius: 9px; background: var(--field); }
-.segmented button { height: 30px; border: 0; border-radius: 7px; background: transparent; font-size: 14px; font-weight: 500; }
+.segmented { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 2px; padding: 3px; border-radius: 10px; background: var(--field); }
+.segmented button { min-width: 0; height: 36px; padding: 0 6px; border: 0; border-radius: 7px; background: transparent; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .segmented button[aria-selected='true'] { background: var(--card); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+/* On a card-coloured sheet, and in dark mode, the selected segment needs its own tone. */
+.sheet .segmented { background: color-mix(in srgb, var(--text) 9%, transparent); }
+:root[data-scheme='dark'] .segmented button[aria-selected='true'] { background: color-mix(in srgb, var(--text) 24%, var(--card)); box-shadow: none; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; margin: 0 calc(-16px - var(--safe-right)) 0 calc(-16px - var(--safe-left)); padding: 0 calc(16px + var(--safe-right)) 2px calc(16px + var(--safe-left)); scrollbar-width: none; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+.chips.scroll .chip { flex: none; white-space: nowrap; }
 .chip { height: 32px; padding: 0 12px; border: 0; border-radius: 16px; background: var(--card); font-size: 14px; font-weight: 600; }
 .chip[aria-pressed='true'] { background: var(--accent); color: var(--accent-text); }
 
@@ -225,6 +231,8 @@ textarea.input { height: auto; min-height: 80px; padding: 10px 12px; resize: ver
   width: 100%; max-width: 640px; margin: 0 auto;
 }
 .sheet.gray { background: var(--bg); }
+/* When the keyboard shrinks the viewport the sheet scrolls; its parts keep their size. */
+.sheet > * { flex-shrink: 0; }
 .sheet .grabber { align-self: center; width: 36px; height: 5px; border-radius: 3px; background: var(--sep); flex: none; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .sheet-head h2 { font-size: 17px; font-weight: 600; }
@@ -245,12 +253,27 @@ textarea.input { height: auto; min-height: 80px; padding: 10px 12px; resize: ver
 .set-grid { display: grid; grid-template-columns: 34px minmax(0, 1fr) 64px 56px 44px; gap: 8px; align-items: center; padding: 0 16px; }
 .set-grid.no-weight { grid-template-columns: 34px minmax(0, 1fr) 72px 44px; }
 .set-grid.time-dist { grid-template-columns: 34px minmax(0, 1fr) 64px 64px 44px; }
+.set-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .set-head { font-size: 12px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: var(--hint); padding-bottom: 6px; }
 .set-row { min-height: 46px; }
 .set-row.done { background: var(--good-soft); }
 .set-row.current { background: color-mix(in srgb, var(--accent) 6%, transparent); }
-.set-label { font-size: 15px; font-weight: 700; border: 0; background: none; padding: 0; text-align: left; }
+.set-label { width: 30px; height: 28px; font-size: 15px; font-weight: 700; border: 0; border-radius: 8px; background: var(--field); padding: 0; text-align: center; }
 .set-label.warm { color: var(--warm); }
+.set-label.drop { color: var(--fat); }
+.swipe { position: relative; overflow: hidden; }
+.swipe .set-row { position: relative; background: var(--card); transition: transform 0.18s ease-out; touch-action: pan-y; }
+.swipe .set-row.done { background: color-mix(in srgb, var(--good) 10%, var(--card)); }
+.swipe .set-row.current { background: color-mix(in srgb, var(--accent) 6%, var(--card)); }
+.swipe-delete { position: absolute; top: 0; right: 0; bottom: 0; width: 88px; border: 0; background: var(--destructive); color: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.add-set-row { display: flex; gap: 8px; margin: 6px 16px 12px; }
+.add-set-row .add-set { margin: 0; flex: 1; width: auto; }
+.superset { display: flex; flex-direction: column; gap: 8px; padding-left: 10px; border-left: 3px solid var(--fat); border-radius: 2px; }
+.superset-head { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--fat); padding: 0 4px; }
+.superset-head .hint { font-weight: 400; }
+.card.in-superset { box-shadow: inset 3px 0 0 var(--fat); }
+.link-btn { align-self: center; margin: 4px 0; height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: transparent; color: var(--hint); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.link-btn.on { background: color-mix(in srgb, var(--fat) 14%, transparent); color: var(--fat); }
 .check { width: 44px; height: 32px; border: 0; border-radius: 8px; background: var(--track); color: var(--hint); display: flex; align-items: center; justify-content: center; }
 .check[aria-pressed='true'] { background: var(--good); color: #FFFFFF; }
 .add-set { margin: 6px 16px 12px; height: 40px; border: 0; border-radius: 10px; background: var(--field); color: var(--link); font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 32px); }

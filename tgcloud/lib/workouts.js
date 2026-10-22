@@ -9,6 +9,7 @@ import { getExercise } from './exercises.js';
 import { e1rm, summarizeSets } from './strength.js';
 import { recordSetPrs, removeSetPrs, recordSessionVolumePrs, prHighlights } from './prs.js';
 import { applyProgression } from './progression.js';
+import { restsAfter, normalizeGroups } from './supersets.js';
 
 const W = T.workouts, WE = T.workoutExercises, S = T.sets, P = T.personalRecords;
 
@@ -135,13 +136,22 @@ export async function addWorkoutExercise(user, input) {
 
 export async function updateWorkoutExercise(user, input) {
   const we = await own(WE, v.id(input.id), user.id, 'Workout exercise');
-  const { id, position, ...rest } = input;
+  const { id, position, linkNext, ...rest } = input;
   const p = v.patch(rest, {
     restSec:       (x, k) => v.num(x, k, { min: 0, max: 900, int: true, optional: true }),
     supersetGroup: (x, k) => v.num(x, k, { min: 1, max: 20, int: true, optional: true }),
     notes:         (x, k) => v.str(x, k, { max: 500, optional: true }),
   });
   if (Object.keys(p).length) await db.update(WE).set(p).where(eq(WE.id, we.id)).run();
+  // linkNext: true → superset with the exercise after it (joining either one's group).
+  if (linkNext !== undefined && v.bool(linkNext, 'linkNext')) {
+    const list = await db.select().from(WE).where(eq(WE.workoutId, we.workoutId)).orderBy(asc(WE.position), asc(WE.id)).all();
+    const next = list[list.findIndex((x) => x.id === we.id) + 1];
+    if (!next) v.invalid('There is no exercise after this one', 'linkNext');
+    const group = we.supersetGroup ?? next.supersetGroup ?? Math.max(0, ...list.map((x) => x.supersetGroup || 0)) + 1;
+    const join = list.filter((x) => x.id === we.id || x.id === next.id || (next.supersetGroup && x.supersetGroup === next.supersetGroup));
+    await db.update(WE).set({ supersetGroup: group }).where(inArray(WE.id, join.map((x) => x.id))).run();
+  }
   if (position !== undefined) {
     const to = v.num(position, 'position', { min: 0, max: 50, int: true });
     const list = await db.select({ id: WE.id }).from(WE).where(eq(WE.workoutId, we.workoutId)).orderBy(asc(WE.position), asc(WE.id)).all();
@@ -149,7 +159,18 @@ export async function updateWorkoutExercise(user, input) {
     order.splice(Math.min(to, order.length), 0, we.id);
     for (const [i, wid] of order.entries()) await db.update(WE).set({ position: i }).where(eq(WE.id, wid)).run();
   }
+  if (position !== undefined || linkNext !== undefined || 'supersetGroup' in p) await tidyGroups(we.workoutId);
   return getWorkout(user, { id: we.workoutId });
+}
+
+// After a move, link or removal: a superset is only consecutive exercises, and a
+// group left with one exercise is dissolved.
+async function tidyGroups(workoutId) {
+  const list = await db.select({ id: WE.id, supersetGroup: WE.supersetGroup }).from(WE)
+    .where(eq(WE.workoutId, workoutId)).orderBy(asc(WE.position), asc(WE.id)).all();
+  for (const [i, e] of normalizeGroups(list).entries()) {
+    if (e.supersetGroup !== list[i].supersetGroup) await db.update(WE).set({ supersetGroup: e.supersetGroup }).where(eq(WE.id, e.id)).run();
+  }
 }
 
 async function deleteSetsWithPrs(user, sets) {
@@ -163,19 +184,33 @@ export async function removeWorkoutExercise(user, input) {
   const we = await own(WE, v.id(input.id), user.id, 'Workout exercise');
   await deleteSetsWithPrs(user, await db.select().from(S).where(eq(S.workoutExerciseId, we.id)).all());
   await db.delete(WE).where(eq(WE.id, we.id)).run();
+  await tidyGroups(we.workoutId);
   return getWorkout(user, { id: we.workoutId });
 }
 
 // New set copying the last one in that exercise (weight, reps …), not completed.
+// `afterSetId` inserts it right after that set instead (a drop set after the set
+// just done); `weightKg` overrides the copied weight.
 export async function addSet(user, input) {
   const we = await own(WE, v.id(input.workoutExerciseId, 'workoutExerciseId'), user.id, 'Workout exercise');
   const setType = v.oneOf(input.setType, 'setType', 'setType', { optional: true }) ?? 'working';
-  const last = await db.select().from(S).where(eq(S.workoutExerciseId, we.id)).orderBy(desc(S.position)).limit(1).get();
+  const afterId = v.id(input.afterSetId, 'afterSetId', { optional: true });
+  const weightKg = v.num(input.weightKg, 'weightKg', { min: 0, max: 1000, optional: true });
+
+  let base = await db.select().from(S).where(eq(S.workoutExerciseId, we.id)).orderBy(desc(S.position)).limit(1).get();
+  let position = base ? base.position + 1 : 0;
+  if (afterId) {
+    base = await own(S, afterId, user.id, 'Set');
+    if (base.workoutExerciseId !== we.id) v.invalid('afterSetId is not in this exercise', 'afterSetId');
+    position = base.position + 1;
+    await db.update(S).set({ position: sql`${S.position} + 1` })
+      .where(and(eq(S.workoutExerciseId, we.id), gte(S.position, position))).run();
+  }
   const [set] = await db.insert(S).values({
     userId: user.id, workoutId: we.workoutId, workoutExerciseId: we.id, exerciseId: we.exerciseId,
-    position: last ? last.position + 1 : 0, setType, completed: false,
-    weightKg: last?.weightKg ?? null, reps: last?.reps ?? null,
-    durationSec: last?.durationSec ?? null, distanceM: last?.distanceM ?? null,
+    position, setType, completed: false,
+    weightKg: weightKg ?? base?.weightKg ?? null, reps: base?.reps ?? null,
+    durationSec: base?.durationSec ?? null, distanceM: base?.distanceM ?? null,
   }).returning();
   return { set };
 }
@@ -222,14 +257,23 @@ export async function updateSet(user, input) {
     if (workout && !workout.endedAt) {
       const we = await db.select().from(WE).where(eq(WE.id, set.workoutExerciseId)).get();
       const ex = await getExercise(user.id, set.exerciseId);
-      const rest = we?.restSec ?? ex.defaultRestSec ?? user.defaultRestSec;
+      const rest = (await restsAfterSet(workout.id, saved.id)) ? we?.restSec ?? ex.defaultRestSec ?? user.defaultRestSec : 0;
       if (rest > 0) {
         restEndsAt = new Date(Date.now() + rest * 1000);
         await db.update(W).set({ restEndsAt }).where(eq(W.id, workout.id)).run();
+      } else if (workout.restEndsAt) {
+        await db.update(W).set({ restEndsAt: null }).where(eq(W.id, workout.id)).run();   // straight on to the next set
       }
     }
   }
   return { set: saved, prs, restEndsAt };
+}
+
+// No rest before a drop set or between the exercises of a superset round.
+async function restsAfterSet(workoutId, setId) {
+  const wes = await db.select().from(WE).where(eq(WE.workoutId, workoutId)).orderBy(asc(WE.position), asc(WE.id)).all();
+  const sets = await db.select().from(S).where(eq(S.workoutId, workoutId)).orderBy(asc(S.position), asc(S.id)).all();
+  return restsAfter(wes.map((we) => ({ ...we, sets: sets.filter((s) => s.workoutExerciseId === we.id) })), setId);
 }
 
 export async function deleteSet(user, input) {

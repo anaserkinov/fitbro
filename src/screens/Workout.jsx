@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApi, call, mutate, invalidate, AFFECTS } from '../lib/api.js';
 import { useUser, useNav } from '../lib/app-state.jsx';
 import { shortDay } from '../lib/format.js';
@@ -9,6 +9,7 @@ import { Loader, MainButton, NumberInput, Sheet, List, Row, Stepper, toast, toas
 import ExercisePicker from '../ui/ExercisePicker.jsx';
 import { Icon } from '../ui/icons.jsx';
 import { haptic, confirmDialog } from '../lib/tg.js';
+import { blocks, nextOpenSet } from '../../tgcloud/lib/supersets.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const clock = (sec) => {
@@ -57,6 +58,42 @@ function previousText(p, fmt, track) {
   return `${fmt.w(p.weightKg, { suffix: false })} × ${p.reps ?? '—'}`;
 }
 
+const WEIGHTED = ['weight_reps', 'weighted_bodyweight'];
+
+// A drop set's weight: about 20% lighter, on the plate step, never below one step.
+function dropWeightKg(kg, fmt) {
+  if (!kg) return null;
+  const step = fmt.plateStep;
+  return fmt.toKg(Math.max(step, Math.round((fmt.wNum(kg) * 0.8) / step) * step));
+}
+
+// Swipe a set row left to reveal Delete (the set menu has it too).
+const SWIPE = 88;
+function useSwipe(onOpen) {
+  const [dx, setDx] = useState(0);
+  const start = useRef(null);
+  const handlers = {
+    onTouchStart: (e) => { const p = e.touches[0]; start.current = { x: p.clientX, y: p.clientY, base: dx, horizontal: null }; },
+    onTouchMove: (e) => {
+      const s = start.current;
+      if (!s) return;
+      const p = e.touches[0];
+      const mx = p.clientX - s.x, my = p.clientY - s.y;
+      if (s.horizontal === null && Math.abs(mx) + Math.abs(my) > 8) s.horizontal = Math.abs(mx) > Math.abs(my);
+      if (s.horizontal) setDx(Math.max(-SWIPE - 24, Math.min(0, s.base + mx)));
+    },
+    onTouchEnd: () => {
+      const s = start.current;
+      start.current = null;
+      if (!s || !s.horizontal) return;
+      const opened = dx < -SWIPE / 2;
+      setDx(opened ? -SWIPE : 0);
+      if (opened && s.base === 0) { haptic.select(); onOpen?.(); }
+    },
+  };
+  return { dx, close: () => setDx(0), handlers };
+}
+
 function TimeInput({ value, onCommit, label }) {
   const [text, setText] = useState(value ? clock(value) : '');
   useEffect(() => setText(value ? clock(value) : ''), [value]);
@@ -67,13 +104,17 @@ function TimeInput({ value, onCommit, label }) {
   );
 }
 
-function SetRow({ set, number, current, track, fmt, prev, onChange, onMenu }) {
+function SetRow({ set, number, current, track, fmt, prev, onChange, onMenu, onDelete }) {
   const cls = `set-grid set-row${set.completed ? ' done' : current ? ' current' : ''}`;
   const grid = track === 'weight_reps' || track === 'weighted_bodyweight' ? '' : track === 'distance_duration' ? ' time-dist' : ' no-weight';
   const label = setLabel(set, number);
+  const swipe = useSwipe();
   return (
-    <div className={cls + grid}>
-      <button type="button" className={`set-label${set.setType === 'warmup' ? ' warm' : ''}`} onClick={onMenu} aria-label={t('Set {label} options', { label })}>{label}</button>
+    <div className="swipe">
+      <button type="button" className="swipe-delete" tabIndex={swipe.dx ? 0 : -1} aria-hidden={!swipe.dx}
+        onClick={() => { swipe.close(); onDelete(); }}><Icon name="trash" size={18} />{t('Delete')}</button>
+    <div className={cls + grid} {...swipe.handlers} style={{ transform: swipe.dx ? `translateX(${swipe.dx}px)` : undefined }}>
+      <button type="button" className={`set-label${set.setType === 'warmup' ? ' warm' : set.setType === 'drop' ? ' drop' : ''}`} onClick={onMenu} aria-label={t('Set {label} options', { label })}>{label}</button>
       <span className="small hint ellipsis">{previousText(prev, fmt, track)}</span>
       {(track === 'weight_reps' || track === 'weighted_bodyweight') && (
         <NumberInput className="inline-input" value={fmt.wNum(set.weightKg)} decimals={2} label={t('Set {label} weight', { label })}
@@ -92,6 +133,7 @@ function SetRow({ set, number, current, track, fmt, prev, onChange, onMenu }) {
         onClick={() => onChange({ completed: !set.completed })}>
         <Icon name="check" size={18} stroke={2.6} />
       </button>
+    </div>
     </div>
   );
 }
@@ -142,7 +184,8 @@ export default function Workout({ id }) {
       const r = await call('updateSet', { id: set.id, ...patch });
       q.setData((cur) => {
         const next = mapSet(cur, set.id, () => r.set);
-        return r.restEndsAt ? { ...next, workout: { ...next.workout, restEndsAt: r.restEndsAt } } : next;
+        // Ticking a set sets the rest timer — or clears it before a drop set / the next superset exercise.
+        return patch.completed ? { ...next, workout: { ...next.workout, restEndsAt: r.restEndsAt } } : next;
       });
       if (r.restEndsAt) setRestTotal(ex.restSec);
       if (r.prs.length) {
@@ -184,6 +227,11 @@ export default function Workout({ id }) {
     } catch (e) { toastError(e); } finally { setFinishing(false); }
   }
 
+  function addDrop(e, base) {
+    haptic.tap();
+    run('addSet', { workoutExerciseId: e.id, setType: 'drop', afterSetId: base.id, weightKg: dropWeightKg(base.weightKg, fmt) });
+  }
+
   async function discard() {
     setExMenu(null);
     if (!(await confirmDialog(t('Discard this workout? Nothing from it will be saved.')))) return;
@@ -198,12 +246,10 @@ export default function Workout({ id }) {
           const w = d.workout;
           const elapsed = open ? (now - new Date(w.startedAt).getTime()) / 1000 : w.durationSec;
           const restOn = open && w.restEndsAt && new Date(w.restEndsAt).getTime() > now - 15000;
-          const WEIGHTED = ['weight_reps', 'weighted_bodyweight'];
           const live = d.exercises.flatMap((e) => e.sets.map((s) => ({ ...s, track: e.exercise.trackType })));
           const doneSets = live.filter((s) => s.completed && s.setType !== 'warmup');
           const volume = doneSets.reduce((a, s) => a + (WEIGHTED.includes(s.track) ? (s.weightKg || 0) * (s.reps || 0) : 0), 0);
-          let firstOpen = null;
-          for (const e of d.exercises) { const s = e.sets.find((x) => !x.completed); if (s) { firstOpen = s.id; break; } }
+          const firstOpen = nextOpenSet(d.exercises)?.set.id ?? null;   // alternates inside a superset
           return (
             <>
               <div className="row-between" style={{ padding: '0 4px' }}>
@@ -224,8 +270,11 @@ export default function Workout({ id }) {
 
               {restOn && <RestBanner endsAt={w.restEndsAt} total={restTotal} now={now} onAdjust={adjustRest} onSkip={() => adjustRest(0)} />}
 
-              {d.exercises.map((e) => {
+              {blocks(d.exercises).map((b) => {
+                const cards = b.exercises.map((e) => {
                 const working = e.previous.filter((p) => p.setType !== 'warmup');
+                const weighted = WEIGHTED.includes(e.exercise.trackType);
+                const dropBase = [...e.sets].reverse().find((s) => s.completed) || e.sets[e.sets.length - 1];
                 let n = 0;
                 return (
                   <div key={e.id} className="ex-card">
@@ -240,7 +289,7 @@ export default function Workout({ id }) {
                       <button type="button" className="icon-btn" style={{ width: 32, height: 32, background: 'transparent' }} aria-label={t('{name} options', { name: cname(e.exercise.name) })} onClick={() => setExMenu(e)}><Icon name="more" size={20} stroke={3} /></button>
                     </div>
                     <div className={`set-grid set-head${e.exercise.trackType === 'weight_reps' || e.exercise.trackType === 'weighted_bodyweight' ? '' : e.exercise.trackType === 'distance_duration' ? ' time-dist' : ' no-weight'}`}>
-                      <span>{t('Set')}</span><span>{t('Previous')}</span>
+                      <span>{t('Set@col')}</span><span>{t('Previous')}</span>
                       {(e.exercise.trackType === 'weight_reps' || e.exercise.trackType === 'weighted_bodyweight') && <span className="center">{e.exercise.trackType === 'weighted_bodyweight' ? `+${fmt.weightLabel}` : fmt.weightLabel}</span>}
                       {e.exercise.trackType === 'distance_duration' && <span className="center">{t('km')}</span>}
                       <span className="center">{e.exercise.trackType === 'duration' || e.exercise.trackType === 'distance_duration' ? t('Time') : t('Reps')}</span><span />
@@ -250,12 +299,27 @@ export default function Workout({ id }) {
                       const prev = s.setType === 'warmup' ? e.previous.find((p) => p.setType === 'warmup') : working[n - 1];
                       return (
                         <SetRow key={s.id} set={s} number={n} current={s.id === firstOpen} track={e.exercise.trackType} fmt={fmt} prev={prev}
-                          onChange={(patch) => changeSet(e, s, patch)} onMenu={() => setSetMenu({ set: s, ex: e })} />
+                          onChange={(patch) => changeSet(e, s, patch)} onMenu={() => setSetMenu({ set: s, ex: e })} onDelete={() => run('deleteSet', { id: s.id })} />
                       );
                     })}
-                    <button type="button" className="add-set" onClick={() => { haptic.tap(); run('addSet', { workoutExerciseId: e.id }); }}>
-                      <Icon name="plus" size={16} stroke={2.4} />{t('Add set')}
-                    </button>
+                    <div className="add-set-row">
+                      <button type="button" className="add-set" onClick={() => { haptic.tap(); run('addSet', { workoutExerciseId: e.id }); }}>
+                        <Icon name="plus" size={16} stroke={2.4} />{t('Add set')}
+                      </button>
+                      {weighted && dropBase && (
+                        <button type="button" className="add-set" onClick={() => addDrop(e, dropBase)}>
+                          <Icon name="plus" size={16} stroke={2.4} />{t('Drop set')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+                });
+                if (b.group === null) return cards;
+                return (
+                  <div key={`ss-${b.exercises[0].id}`} className="superset">
+                    <div className="superset-head"><Icon name="link" size={14} stroke={2.4} />{t('Superset')}<span className="hint"> · {t('no rest between exercises')}</span></div>
+                    {cards}
                   </div>
                 );
               })}
@@ -275,6 +339,12 @@ export default function Workout({ id }) {
                         </Row>
                       ))}
                     </List>
+                    {WEIGHTED.includes(setMenu.ex.exercise.trackType) && (
+                      <List>
+                        <Row title={t('Add a drop set after this one')} sub={setMenu.set.weightKg ? fmt.w(dropWeightKg(setMenu.set.weightKg, fmt)) : null}
+                          onClick={() => { const { ex, set } = setMenu; setSetMenu(null); addDrop(ex, set); }} />
+                      </List>
+                    )}
                     <button type="button" className="btn danger block" style={{ background: 'var(--field)' }} onClick={() => { const s = setMenu.set; setSetMenu(null); run('deleteSet', { id: s.id }); }}>{t('Delete set')}</button>
                   </>
                 )}
@@ -294,6 +364,19 @@ export default function Workout({ id }) {
                     </div>
                     <List>
                       <Row title={t('Save rest time')} onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, restSec: e.restSec }); }} />
+                      {(() => {
+                        const i = d.exercises.findIndex((x) => x.id === exMenu.id);
+                        const block = blocks(d.exercises).find((b) => b.exercises.some((x) => x.id === exMenu.id));
+                        const next = d.exercises[i + 1];
+                        const linked = block && block.group !== null;
+                        const linkedToNext = linked && next && block.exercises.some((x) => x.id === next.id);
+                        return (
+                          <>
+                            {next && !linkedToNext && <Row title={t('Superset with next exercise')} sub={cname(next.exercise.name)} onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, linkNext: true }); }} />}
+                            {linked && <Row title={t('Remove from superset')} onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, supersetGroup: null }); }} />}
+                          </>
+                        );
+                      })()}
                       <Row title={t('Move up')} onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, position: Math.max(0, d.exercises.indexOf(d.exercises.find((x) => x.id === e.id)) - 1) }); }} />
                       <Row title={t('Move down')} onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, position: d.exercises.findIndex((x) => x.id === e.id) + 1 }); }} />
                       <Row title={t('Remove exercise')} danger onClick={async () => { const e = exMenu; setExMenu(null); if (await confirmDialog(t('Remove {name} and its sets?', { name: cname(e.exercise.name) }))) run('removeWorkoutExercise', { id: e.id }); }} />

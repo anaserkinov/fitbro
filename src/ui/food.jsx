@@ -9,8 +9,9 @@ import { Icon } from './icons.jsx';
 import { haptic, confirmDialog } from '../lib/tg.js';
 import { t, cname } from '../lib/i18n.js';
 
-// A function, not a constant: labels follow the current language.
-export const mealOptions = () => ['breakfast', 'lunch', 'dinner', 'snack'].map((m) => ({ value: m, label: t(MEAL_LABEL[m]) }));
+// A function, not a constant: labels follow the current language. Short forms
+// ('Dinner@short') so four tabs fit on a phone in every language.
+export const mealOptions = () => ['breakfast', 'lunch', 'dinner', 'snack'].map((m) => ({ value: m, label: t(`${MEAL_LABEL[m]}@short`) }));
 
 // Breakfast before 11, lunch until 16, dinner until 21, otherwise snack.
 export function mealForNow() {
@@ -120,7 +121,7 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 8, alignItems: 'end' }}>
             <label className="form-row"><span className="label">{t('Amount')}</span>
-              <NumberInput value={qty} decimals={unit === 'serving' ? 2 : 0} onCommit={(v) => setQty(v ?? 0)} label={t('Amount')} autoFocus={!editing} /></label>
+              <NumberInput value={qty} decimals={unit === 'serving' ? 2 : 0} live onCommit={(v) => setQty(v ?? 0)} label={t('Amount')} autoFocus={!editing} /></label>
             {units.length > 1 ? <Segmented label={t('Unit')} value={unit} onChange={setUnit} options={units} /> : <span className="hint" style={{ paddingBottom: 12 }}>{t(unit)}</span>}
           </div>
           <div className="row-between"><span className="hint">{t('Energy')}</span><span className="mid-num">{fmt.e(n.kcal)}</span></div>
@@ -160,13 +161,13 @@ export function QuickAddSheet({ open, onClose, date, meal: initialMeal, onSaved 
         <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">{t('Name (optional)')}</span>
           <input className="input" placeholder={t('e.g. Protein bar')} value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} /></label>
         <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">{t('Energy, {unit}', { unit: fmt.energyUnit })}</span>
-          <NumberInput value={v.kcal} decimals={0} placeholder="0" autoFocus onCommit={(x) => setV({ ...v, kcal: x })} label={t('Energy')} /></label>
-        <label className="form-row"><span className="label">{t('Protein, g')}</span><NumberInput value={v.proteinG} placeholder="—" onCommit={(x) => setV({ ...v, proteinG: x })} label={t('Protein')} /></label>
-        <label className="form-row"><span className="label">{t('Carbs, g')}</span><NumberInput value={v.carbsG} placeholder="—" onCommit={(x) => setV({ ...v, carbsG: x })} label={t('Carbs')} /></label>
-        <label className="form-row"><span className="label">{t('Fat, g')}</span><NumberInput value={v.fatG} placeholder="—" onCommit={(x) => setV({ ...v, fatG: x })} label={t('Fat')} /></label>
+          <NumberInput value={v.kcal} decimals={0} placeholder="0" autoFocus live onCommit={(x) => setV((cur) => ({ ...cur, kcal: x }))} label={t('Energy')} /></label>
+        <label className="form-row"><span className="label">{t('Protein, g')}</span><NumberInput value={v.proteinG} placeholder="—" live onCommit={(x) => setV((cur) => ({ ...cur, proteinG: x }))} label={t('Protein')} /></label>
+        <label className="form-row"><span className="label">{t('Carbs, g')}</span><NumberInput value={v.carbsG} placeholder="—" live onCommit={(x) => setV((cur) => ({ ...cur, carbsG: x }))} label={t('Carbs')} /></label>
+        <label className="form-row"><span className="label">{t('Fat, g')}</span><NumberInput value={v.fatG} placeholder="—" live onCommit={(x) => setV((cur) => ({ ...cur, fatG: x }))} label={t('Fat')} /></label>
       </div>
       <Segmented label={t('Meal')} value={meal} onChange={setMeal} options={mealOptions()} />
-      <button type="button" className="btn lg block" disabled={busy || !(v.kcal >= 0 && v.kcal !== null)} onClick={save}>{t('Add')}</button>
+      <button type="button" className="btn lg block" disabled={busy || !(v.kcal > 0)} onClick={save}>{busy ? t('Saving…') : t('Add')}</button>
     </Sheet>
   );
 }

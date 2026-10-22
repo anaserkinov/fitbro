@@ -5,6 +5,7 @@ import * as v from './validate.js';
 import { own, visible } from './db-util.js';
 import { today } from './users.js';
 import { weekday, weekStart, addDays } from './dates.js';
+import { normalizeGroups } from './supersets.js';
 
 const R = T.routines, RE = T.routineExercises, SCH = T.schedule;
 const SECONDS_PER_SET = 40;   // time under load + setup, for the duration estimate
@@ -102,7 +103,8 @@ export async function saveRoutine(user, input) {
   const id = v.id(input.id, 'id', { optional: true });
   const name = v.str(input.name, 'name', { max: 60, optional: !!id });
   const notes = input.notes === undefined ? undefined : v.str(input.notes, 'notes', { max: 1000, optional: true });
-  const items = input.items === undefined ? undefined : v.list(input.items, 'items', cleanItem, { max: 30 });
+  // Superset groups are renumbered in order; a group of one is dropped.
+  const items = input.items === undefined ? undefined : normalizeGroups(v.list(input.items, 'items', cleanItem, { max: 30 }).map((it) => ({ supersetGroup: null, ...it })));
 
   if (items) for (const it of items) await visible(T.exercises, it.exerciseId, user.id, 'Exercise');
 

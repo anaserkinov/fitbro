@@ -8,6 +8,20 @@ import { Icon } from '../ui/icons.jsx';
 import { haptic } from '../lib/tg.js';
 import { t, cname } from '../lib/i18n.js';
 
+// Browse groups (server: BROWSE in lib/food.js). Labels are translation keys.
+const GROUPS = [
+  { id: 'mine', emoji: '✏️', label: 'My foods' },
+  { id: 'recipes', emoji: '🍲', label: 'Recipes' },
+  { id: 'meat_fish', emoji: '🍗', label: 'Meat & fish' },
+  { id: 'dairy', emoji: '🥚', label: 'Eggs & dairy' },
+  { id: 'grains', emoji: '🍞', label: 'Grains & starches' },
+  { id: 'legumes', emoji: '🫘', label: 'Legumes & tofu' },
+  { id: 'fruit', emoji: '🍎', label: 'Fruit' },
+  { id: 'vegetables', emoji: '🥦', label: 'Vegetables' },
+  { id: 'fats_sweets', emoji: '🥜', label: 'Nuts, oils & sweets' },
+  { id: 'drinks', emoji: '🥤', label: 'Drinks' },
+];
+
 function useDebounced(value, ms) {
   const [v, setV] = useState(value);
   useEffect(() => { const h = setTimeout(() => setV(value), ms); return () => clearTimeout(h); }, [value, ms]);
@@ -19,7 +33,10 @@ export default function FoodSearch({ date, meal, scan = false }) {
   const nav = useNav();
   const [text, setText] = useState('');
   const term = useDebounced(text.trim(), 250);
-  const q = useApi('searchFoods', term ? { q: term } : {});
+  const [group, setGroup] = useState(null);
+  // Typing searches (within the picked group, if any); no text + a group browses it.
+  const browsing = !term && !!group;
+  const q = useApi(browsing ? 'browseFoods' : 'searchFoods', browsing ? { category: group } : term ? { q: term, ...(group ? { category: group } : {}) } : {});
   const [picked, setPicked] = useState(null);
   const [quick, setQuick] = useState(false);
   const [barcode, setBarcode] = useState(scan);
@@ -29,7 +46,7 @@ export default function FoodSearch({ date, meal, scan = false }) {
     haptic.select();
     const next = !(favs[food.id] ?? food.favorite);
     setFavs({ ...favs, [food.id]: next });
-    try { await call('setFavoriteFood', { foodId: food.id, favorite: next }); invalidate('searchFoods'); } catch (e) { toastError(e); }
+    try { await call('setFavoriteFood', { foodId: food.id, favorite: next }); invalidate('searchFoods', 'browseFoods'); } catch (e) { toastError(e); }
   }
 
   const FoodRow = ({ f }) => {
@@ -69,8 +86,24 @@ export default function FoodSearch({ date, meal, scan = false }) {
         <button type="button" className="btn plain sm" onClick={() => nav.push('FoodEditor', {})}>{t('New food')}</button>
         <button type="button" className="btn plain sm" onClick={() => nav.push('RecipeEditor', {})}>{t('New recipe')}</button>
       </div>
+      <div className="chips scroll" role="group" aria-label={t('Categories')}>
+        {GROUPS.map((g) => (
+          <button key={g.id} type="button" className="chip" aria-pressed={group === g.id}
+            onClick={() => { haptic.select(); setGroup(group === g.id ? null : g.id); }}>
+            <span aria-hidden="true">{g.emoji}</span> {t(g.label)}
+          </button>
+        ))}
+      </div>
 
-      {q.error ? <ErrorBox error={q.error} onRetry={q.reload} /> : !results ? <Spinner /> : term ? (
+      {q.error ? <ErrorBox error={q.error} onRetry={q.reload} /> : !results ? <Spinner /> : browsing ? (
+        results.foods?.length ? (
+          <Section title={t(GROUPS.find((g) => g.id === group).label)}><div className="list">{results.foods.map((f) => <FoodRow key={f.id} f={f} />)}</div></Section>
+        ) : group === 'mine' ? (
+          <Empty action={<button type="button" className="btn soft" onClick={() => nav.push('FoodEditor', {})}>{t('New food')}</button>}>{t('You haven’t created any foods yet.')}</Empty>
+        ) : group === 'recipes' ? (
+          <Empty action={<button type="button" className="btn soft" onClick={() => nav.push('RecipeEditor', {})}>{t('New recipe')}</button>}>{t('No recipes yet. Combine foods into a recipe to log it in one tap.')}</Empty>
+        ) : <Empty>{t('Nothing here yet.')}</Empty>
+      ) : term ? (
         results.results?.length ? (
           <div className="list">{results.results.map((f) => <FoodRow key={f.id} f={f} />)}</div>
         ) : (

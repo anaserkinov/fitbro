@@ -11,10 +11,14 @@ import { encodeBase64 } from '../tgcloud/lib/base64.js';
 const E = {};
 const call = async (name, input = {}, userId = 222) => {
   E[name] ??= (await import(`../tgcloud/endpoints/${name}.js`)).default;
-  return E[name](input, { initData: { user: { id: userId, first_name: 'Endpoint', language_code: 'en' } } });
+  const out = await E[name](input, { initData: { user: { id: userId, first_name: 'Endpoint', language_code: 'en' } } });
+  assert.ok(!hasDate(out), `${name} returned a Date (it would reach the app as {})`);
+  return out;
 };
 const fails = (p, code) => assert.rejects(p, (e) => (e.parameters && e.parameters.code) === code);
 let n = 0; const ok = (name) => { n++; console.log('  ✓', name); };
+// What the platform does to a response: a Date becomes {} — so none may be left in one.
+const hasDate = (v) => v instanceof Date || (Array.isArray(v) ? v.some(hasDate) : !!v && typeof v === 'object' && Object.values(v).some(hasDate));
 const TZ = 'Asia/Tashkent';
 const today = localDate(TZ);
 
@@ -57,7 +61,7 @@ const bench = w.exercises[0];
 assert.equal(w.exercises.length, 2); assert.deepEqual(bench.sets.map((s) => [s.weightKg, s.reps, s.completed]), [[80, 8, false], [80, 8, false], [80, 8, false]]); ok('sets pre-filled from routine targets');
 await fails(call('startWorkout', {}), 'WORKOUT_IN_PROGRESS'); ok('one workout at a time');
 let r = await call('updateSet', { id: bench.sets[0].id, completed: true });
-assert.ok(r.restEndsAt > new Date()); assert.deepEqual(r.prs, []); assert.equal(r.set.e1rmKg, 101.3); ok('tick set → rest timer, e1RM, no PR on first ever set');
+assert.ok(new Date(r.restEndsAt) > new Date()); assert.deepEqual(r.prs, []); assert.equal(r.set.e1rmKg, 101.3); ok('tick set → rest timer, e1RM, no PR on first ever set');
 await call('updateSet', { id: bench.sets[1].id, completed: true });
 await call('updateSet', { id: bench.sets[2].id, reps: 8, completed: true });
 const extra = (await call('addSet', { workoutExerciseId: bench.id })).set; assert.equal(extra.weightKg, 80); assert.equal(extra.completed, false);
@@ -80,6 +84,36 @@ const list = await call('listWorkouts', { from: today, to: today });
 assert.equal(list.workouts.length, 2); assert.equal(list.workouts[0].notes, 'felt strong'); assert.ok(list.workouts[0].prs.length > 0); assert.equal(list.workouts[1].prs.length, 0); ok('history list with PR flags');
 const empty = await call('startWorkout', { name: 'Quick' }); assert.deepEqual((await call('finishWorkout', { id: empty.workout.id })), { discarded: true }); ok('finishing an empty workout discards it');
 await fails(call('getWorkout', { id: list.workouts[0].id }, 333), 'NOT_FOUND'); ok("other users can't open your workouts");
+
+console.log('Endpoints: drop sets & supersets');
+let arms = await call('startWorkout', { name: 'Arms' });
+arms = await call('addWorkoutExercise', { workoutId: arms.workout.id, exerciseId: id('Barbell Curl'), sets: 2 });
+arms = await call('addWorkoutExercise', { workoutId: arms.workout.id, exerciseId: id('Triceps Pushdown'), sets: 2 });
+const [curl, pushdown] = arms.exercises;
+await call('updateSet', { id: curl.sets[0].id, weightKg: 30, reps: 10 });
+const drop = (await call('addSet', { workoutExerciseId: curl.id, setType: 'drop', afterSetId: curl.sets[0].id, weightKg: 24 })).set;
+arms = await call('getWorkout', { id: arms.workout.id });
+assert.deepEqual(arms.exercises[0].sets.map((s) => [s.id === drop.id ? 'drop' : s.setType, s.weightKg]), [['working', 30], ['drop', 24], ['working', null]]);
+assert.equal(drop.reps, 10); ok('drop set goes right after its set, lighter, same reps');
+r = await call('updateSet', { id: curl.sets[0].id, completed: true }); assert.equal(r.restEndsAt, null); ok('no rest before a drop set');
+r = await call('updateSet', { id: drop.id, completed: true }); assert.ok(r.restEndsAt); ok('rest after the drop set');
+arms = await call('updateWorkoutExercise', { id: curl.id, linkNext: true });
+assert.ok(arms.exercises[0].supersetGroup); assert.equal(arms.exercises[0].supersetGroup, arms.exercises[1].supersetGroup); ok('superset: link with the next exercise');
+r = await call('updateSet', { id: pushdown.sets[0].id, completed: true }); assert.ok(r.restEndsAt); ok('superset: rest after the round (curl + drop, pushdown)');
+r = await call('updateSet', { id: curl.sets[1].id, completed: true }); assert.equal(r.restEndsAt, null);
+assert.equal((await call('getWorkout', { id: arms.workout.id })).workout.restEndsAt, null); ok('superset: no rest between exercises in a round');
+r = await call('updateSet', { id: pushdown.sets[1].id, completed: true }); assert.ok(r.restEndsAt); ok('superset: rest after the last exercise of the round');
+arms = await call('updateWorkoutExercise', { id: pushdown.id, supersetGroup: null });
+assert.deepEqual(arms.exercises.map((e) => e.supersetGroup), [null, null]); ok('unlinking leaves no group of one');
+await call('discardWorkout', { id: arms.workout.id });
+const grouped = (await call('saveRoutine', { name: 'SS', items: [
+  { exerciseId: id('Barbell Curl'), supersetGroup: 7 }, { exerciseId: id('Triceps Pushdown'), supersetGroup: 7 }, { exerciseId: id('Plank'), supersetGroup: 9 },
+] })).routine;
+assert.deepEqual(grouped.items.map((i) => i.supersetGroup), [1, 1, null]); ok('routine superset groups renumbered, lone group dropped');
+arms = await call('startWorkout', { routineId: grouped.id });
+assert.deepEqual(arms.exercises.map((e) => e.supersetGroup), [1, 1, null]); ok('workout from routine keeps the superset');
+await call('discardWorkout', { id: arms.workout.id });
+await call('archiveRoutine', { id: grouped.id });
 
 console.log('Endpoints: progress');
 const hist = await call('getExerciseHistory', { exerciseId: id('Barbell Bench Press') });
@@ -109,6 +143,14 @@ assert.equal(shake.custom, true); assert.equal((await find('shake'))[0].id, shak
 const whey = (await find('whey'))[0];
 const recipe = await call('saveRecipe', { name: 'Overnight oats', items: [{ foodId: oats.id, grams: 80 }, { foodId: whey.id, grams: 30 }], servingLabel: '1 jar', servingGrams: 110 });
 assert.equal(recipe.food.source, 'recipe'); assert.equal(recipe.items.length, 2); assert.equal(recipe.food.kcalPer100, 384.7); ok('recipe per-100 g from ingredients');
+const fruit = (await call('browseFoods', { category: 'fruit' })).foods;
+assert.deepEqual(fruit.map((f) => f.name), ['Apple', 'Avocado', 'Banana', 'Blueberries', 'Grapes', 'Orange', 'Strawberries']);
+assert.ok(fruit.every((f) => f.category === 'fruit')); assert.equal(fruit.find((f) => f.name === 'Banana').favorite, true); ok('browse a category, A–Z, favourites marked');
+assert.deepEqual((await call('browseFoods', { category: 'mine' })).foods.map((f) => f.name), ['My shake']);
+assert.deepEqual((await call('browseFoods', { category: 'recipes' })).foods.map((f) => f.name), ['Overnight oats']); ok('browse my foods and my recipes');
+assert.deepEqual((await call('browseFoods', { category: 'mine' }, 333)).foods, []); ok("someone else's foods aren't listed");
+await fails(call('browseFoods', { category: 'pizza' }), 'INVALID_INPUT'); ok('unknown category refused');
+assert.ok((await call('searchFoods', { q: 'o', category: 'drinks' })).results.every((f) => f.category === 'drinks')); ok('search within a category');
 await call('logWater', { amountMl: 250 }); let water = await call('logWater', { amountMl: 250 }); assert.equal(water.totalMl, 500);
 water = await call('undoWater', {}); assert.equal(water.totalMl, 250); ok('water + undo');
 globalThis.fakeFetch = async () => ({ ok: true, status: 200, json: async () => ({ status: 1, product: { product_name: 'Skyr', nutriments: { 'energy-kcal_100g': 63, proteins_100g: 11 } } }) });
@@ -136,7 +178,7 @@ const got = await call('getPhoto', { id: photo.id }); assert.equal(got.mime, 'im
 console.log('Endpoints: settings & notifications');
 const before = (await call('getSettings')).reminders.find((x) => x.type === 'meal').nextRunAt;
 settings = await call('updateSettings', { timezone: 'Europe/Berlin', weightUnit: 'lb' });
-assert.notEqual(settings.reminders.find((x) => x.type === 'meal').nextRunAt.getTime(), before.getTime()); ok('timezone change reschedules reminders');
+assert.notEqual(settings.reminders.find((x) => x.type === 'meal').nextRunAt, before); ok('timezone change reschedules reminders');
 await call('updateSettings', { timezone: TZ, weightUnit: 'kg' });
 const meal = (await call('updateReminder', { type: 'meal', times: ['09:00'] })).reminder; assert.deepEqual(meal.times, ['09:00']); ok('edit reminder times');
 await db.update(T.reminders).set({ nextRunAt: new Date(Date.now() - 1000) }).where(eq(T.reminders.userId, 222)).run();
@@ -145,7 +187,7 @@ const sent = await processReminders();
 const texts = globalThis.apiCalls.filter((c) => c[0] === 'sendMessage').map((c) => c[1].text);
 assert.ok(texts.some((t) => t.startsWith('🍽'))); assert.ok(texts.some((t) => t.startsWith('📊'))); assert.ok(!texts.some((t) => t.startsWith('⚖️')));
 assert.ok(sent.skipped >= 1); ok(`reminders sent (${sent.sent}), weigh-in skipped because already weighed`);
-const after = (await call('getSettings')).reminders; assert.ok(after.every((x) => !x.enabled || x.nextRunAt > new Date())); ok('every due reminder rescheduled');
+const after = (await call('getSettings')).reminders; assert.ok(after.every((x) => !x.enabled || new Date(x.nextRunAt) > new Date())); ok('every due reminder rescheduled');
 const chatW = await call('startWorkout', { routineId: routine.id });
 await db.update(T.workouts).set({ chatMessageId: 1, restEndsAt: new Date(Date.now() - 1000) }).where(eq(T.workouts.id, chatW.workout.id)).run();
 globalThis.apiCalls = [];

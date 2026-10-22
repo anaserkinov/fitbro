@@ -13,8 +13,21 @@ export function endpoint(fn, { onboarded = false, allow = null } = {}) {
     if (allow && !allow.includes(tg.id)) throw new EndpointError('Not allowed', { code: 'FORBIDDEN' });
     const user = await ensureUser(tg);
     if (onboarded && !user.onboardedAt) throw new EndpointError('Finish setup first', { code: 'NOT_ONBOARDED' });
-    return fn(user, input && typeof input === 'object' && !Array.isArray(input) ? input : {});
+    return toWire(await fn(user, input && typeof input === 'object' && !Array.isArray(input) ? input : {}));
   };
+}
+
+// The platform serializes a Date in a response as `{}`, so instants are turned into
+// ISO strings here (an invalid Date becomes null).
+export function toWire(value) {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  if (Array.isArray(value)) return value.map(toWire);
+  if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = toWire(v);
+    return out;
+  }
+  return value;
 }
 
 // Refusals that aren't about one input field.

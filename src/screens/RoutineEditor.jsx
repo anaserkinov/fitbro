@@ -7,6 +7,7 @@ import ExercisePicker from '../ui/ExercisePicker.jsx';
 import { Icon } from '../ui/icons.jsx';
 import { haptic, confirmDialog } from '../lib/tg.js';
 import { t as tr, cname } from '../lib/i18n.js';
+import { normalizeGroups } from '../../tgcloud/lib/supersets.js';
 
 const REST_OPTIONS = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
 const WEIGHTED = ['weight_reps', 'weighted_bodyweight'];
@@ -26,10 +27,29 @@ function newItem(ex, fmt) {
   };
 }
 
-function ItemCard({ item, index, count, fmt, defaultRest, onChange, onMove, onRemove }) {
+const linked = (a, b) => !!a && !!b && a.supersetGroup != null && a.supersetGroup === b.supersetGroup;
+
+// Links item i with item i + 1 into a superset (merging groups), or splits them.
+function toggleLink(items, i) {
+  const list = items.map((x) => ({ ...x }));
+  const fresh = Math.max(0, ...list.map((x) => x.supersetGroup || 0)) + 1;
+  const a = list[i], b = list[i + 1];
+  if (linked(a, b)) {
+    const g = a.supersetGroup;
+    for (let j = i + 1; j < list.length && list[j].supersetGroup === g; j++) list[j].supersetGroup = fresh;
+  } else {
+    const g = a.supersetGroup ?? b.supersetGroup ?? fresh;
+    const old = b.supersetGroup;
+    a.supersetGroup = g;
+    for (let j = i + 1; j < list.length && (j === i + 1 || (old != null && list[j].supersetGroup === old)); j++) list[j].supersetGroup = g;
+  }
+  return normalizeGroups(list);
+}
+
+function ItemCard({ item, index, count, fmt, defaultRest, superset, onChange, onMove, onRemove }) {
   const t = item.exercise.trackType;
   return (
-    <div className="card" style={{ gap: 10 }}>
+    <div className={`card${superset ? ' in-superset' : ''}`} style={{ gap: 10 }}>
       <div className="row-between">
         <span className="bold ellipsis" style={{ fontSize: 17 }}>{index + 1}. {cname(item.exercise.name)}</span>
         <div style={{ display: 'flex', gap: 2 }}>
@@ -93,7 +113,8 @@ export default function RoutineEditor({ id }) {
   if (!r) return <div className="screen sub"><Spinner /></div>;
   const update = (patch) => { setR({ ...r, ...patch }); setDirty(true); };
   const setItem = (i, patch) => update({ items: r.items.map((it, j) => (j === i ? { ...it, ...patch } : it)) });
-  const move = (i, d) => { const items = [...r.items]; [items[i], items[i + d]] = [items[i + d], items[i]]; update({ items }); };
+  // A moved exercise leaves its superset; groups stay consecutive.
+  const move = (i, d) => { const items = [...r.items]; [items[i], items[i + d]] = [{ ...items[i + d] }, { ...items[i], supersetGroup: null }]; update({ items: normalizeGroups(items) }); };
 
   async function save() {
     setBusy(true);
@@ -107,7 +128,7 @@ export default function RoutineEditor({ id }) {
           targetRepsMin: it.targetRepsMin ?? null, targetRepsMax: it.targetRepsMax ?? null,
           targetWeightKg: it.targetWeightKg ?? null, targetDurationSec: it.targetDurationSec ?? null,
           restSec: it.restSec ?? null, autoProgress: !!it.autoProgress, incrementKg: it.incrementKg ?? null,
-          ...(it.supersetGroup ? { supersetGroup: it.supersetGroup } : {}),
+          supersetGroup: it.supersetGroup ?? null,
         })),
       }, AFFECTS.routines);
       haptic.success();
@@ -129,8 +150,17 @@ export default function RoutineEditor({ id }) {
         <label className="form-row"><span className="label">{tr('Notes')}</span><textarea className="input" value={r.notes} placeholder={tr('Optional')} onChange={(e) => update({ notes: e.target.value })} /></label>
       </div>
       {r.items.map((it, i) => (
-        <ItemCard key={it.id || `new-${i}-${it.exercise.id}`} item={it} index={i} count={r.items.length} fmt={fmt} defaultRest={user.defaultRestSec}
-          onChange={(p) => setItem(i, p)} onMove={(d) => move(i, d)} onRemove={() => update({ items: r.items.filter((_, j) => j !== i) })} />
+        <div key={it.id || `new-${i}-${it.exercise.id}`} className="stack-sm" style={{ gap: 0 }}>
+          <ItemCard item={it} index={i} count={r.items.length} fmt={fmt} defaultRest={user.defaultRestSec}
+            superset={linked(r.items[i - 1], it) || linked(it, r.items[i + 1])}
+            onChange={(p) => setItem(i, p)} onMove={(d) => move(i, d)} onRemove={() => update({ items: normalizeGroups(r.items.filter((_, j) => j !== i)) })} />
+          {i < r.items.length - 1 && (
+            <button type="button" className={`link-btn${linked(it, r.items[i + 1]) ? ' on' : ''}`} aria-pressed={linked(it, r.items[i + 1])}
+              onClick={() => { haptic.select(); update({ items: toggleLink(r.items, i) }); }}>
+              <Icon name="link" size={14} stroke={2.4} />{linked(it, r.items[i + 1]) ? tr('Superset · tap to unlink') : tr('Link as superset')}
+            </button>
+          )}
+        </div>
       ))}
       <button type="button" className="btn plain lg block" onClick={() => setPicker(true)}><Icon name="plus" size={18} stroke={2.4} />{tr('Add exercise')}</button>
       {id && !dirty && r.items.length > 0 && <button type="button" className="btn soft lg block" onClick={() => startOrResume(nav, id)}>{tr('Start this routine')}</button>}
