@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Body</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#1E73BE;text-decoration:none}a:hover{color:#165A96}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #EFEFF4; color: #111111; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased">
+  <div style="padding: 16px 16px 100px; display: flex; flex-direction: column; gap: 12px">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px">
+      <h1 style="margin: 0; font-size: 32px; line-height: 38px; font-weight: 700; letter-spacing: -0.5px">Body</h1>
+      <a href="Settings.dc.html" aria-label="Settings" style="width: 36px; height: 36px; border-radius: 18px; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E73BE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+      </a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 14px; background: #FFFFFF">
+      <div style="display: flex; align-items: flex-end; justify-content: space-between">
+        <div>
+          <div style="font-size: 13px; color: #6D6D72">Weight · today</div>
+          <div style="font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -0.5px">{{weight}}<span style="font-size: 16px; font-weight: 500; color: #6D6D72"> kg</span></div>
+        </div>
+        <div style="text-align: right">
+          <div style="font-size: 13px; color: #6D6D72">7-day average</div>
+          <div style="font-size: 17px; font-weight: 600">82.7 kg</div>
+        </div>
+      </div>
+      <svg width="326" height="96" viewBox="0 0 326 96" role="img" aria-label="Bodyweight over the last 30 days, trending down from 84.6 to 82.4 kg">
+        <line x1="0" y1="85.6" x2="326" y2="85.6" stroke="#8E5BD8" stroke-width="1" stroke-dasharray="4 4" stroke-opacity="0.5"/>
+        <sc-for list="{{dots}}" as="d" hint-placeholder-count="30">
+          <circle cx="{{d.x}}" cy="{{d.y}}" r="2.5" fill="#C9B3EE"/>
+        </sc-for>
+        <polyline points="{{avg}}" fill="none" stroke="#8E5BD8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div style="display: flex; justify-content: space-between; font-size: 13px; color: #6D6D72">
+        <span>Goal 78.0 kg <span style="color: #8E5BD8">- - -</span></span>
+        <span>On pace for <span style="font-weight: 600; color: #111111">27 Dec</span></span>
+      </div>
+      <button type="button" onClick="{{openSheet}}" style="height: 44px; border: 0; border-radius: 12px; background: #1E73BE; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer">Log weight</button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; justify-content: space-between; padding: 0 16px; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: #6D6D72"><span>Measurements</span><span style="text-transform: none; letter-spacing: 0; font-weight: 400">vs. 1 Sep</span></div>
+      <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFFFF; overflow: hidden">
+        <sc-for list="{{measures}}" as="m" hint-placeholder-count="5">
+          <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; border-top: {{m.border}}">
+            <span style="flex: 1; font-size: 16px">{{m.name}}</span>
+            <span style="font-size: 16px; font-weight: 600">{{m.value}}</span>
+            <span style="width: 52px; text-align: right; font-size: 14px; font-weight: 600; color: {{m.color}}">{{m.delta}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; justify-content: space-between; padding: 0 16px; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: #6D6D72"><span>Progress photos</span><span style="text-transform: none; letter-spacing: 0; font-weight: 400; color: #1E73BE">Compare</span></div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <div style="height: 104px; border-radius: 12px; background: #DCD3EE; display: flex; align-items: flex-end; padding: 8px; box-sizing: border-box; font-size: 12px; font-weight: 600; color: #3E2A66">Front · 1 Sep</div>
+        <div style="height: 104px; border-radius: 12px; background: #CFE0F2; display: flex; align-items: flex-end; padding: 8px; box-sizing: border-box; font-size: 12px; font-weight: 600; color: #163E66">Front · 1 Oct</div>
+        <button type="button" style="height: 104px; border: 1.5px dashed #B0B0B6; border-radius: 12px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 600; color: #1E73BE; cursor: pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E73BE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Add photo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 83px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(249, 249, 251, 0.96); border-top: 0.5px solid #C8C8CE">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Today</a>
+    <a href="Routines.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>Train</a>
+    <a href="Food.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 2.5-3 6s1.5 4 3 4v8"/></svg>Food</a>
+    <a href="Progress.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-5 4 3 8-8M15 7h5v5"/></svg>Progress</a>
+    <a href="Body.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #1E73BE; font-size: 10px; font-weight: 600">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="#1E73BE" stroke="#1E73BE" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6z"/></svg>Body</a>
+  </nav>
+
+  <sc-if value="{{sheet}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: flex; flex-direction: column; justify-content: flex-end">
+      <button type="button" aria-label="Close" onClick="{{closeSheet}}" style="flex: 1; border: 0; background: transparent; cursor: pointer"></button>
+      <div role="dialog" aria-label="Log weight" style="display: flex; flex-direction: column; gap: 18px; padding: 8px 16px 34px; border-radius: 14px 14px 0 0; background: #FFFFFF">
+        <div style="align-self: center; width: 36px; height: 5px; border-radius: 3px; background: #D1D1D6"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span style="font-size: 17px; font-weight: 600">Log weight</span>
+          <span style="font-size: 15px; color: #6D6D72">Today, 07:40</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 24px">
+          <button type="button" aria-label="Decrease by 0.1 kg" onClick="{{dec}}" style="width: 52px; height: 52px; border: 0; border-radius: 26px; background: #F2F2F7; color: #1E73BE; font: inherit; font-size: 26px; font-weight: 500; cursor: pointer">−</button>
+          <div style="min-width: 150px; text-align: center; font-size: 44px; font-weight: 700; letter-spacing: -1px">{{draft}}<span style="font-size: 20px; font-weight: 500; color: #6D6D72"> kg</span></div>
+          <button type="button" aria-label="Increase by 0.1 kg" onClick="{{inc}}" style="width: 52px; height: 52px; border: 0; border-radius: 26px; background: #F2F2F7; color: #1E73BE; font: inherit; font-size: 26px; font-weight: 500; cursor: pointer">+</button>
+        </div>
+        <button type="button" onClick="{{save}}" style="height: 50px; border: 0; border-radius: 12px; background: #1E73BE; color: #FFFFFF; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer">Save</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { weight: 82.4, draft: 82.4, sheet: false };
+  }
+  renderVals() {
+    const raw = [];
+    for (let i = 0; i < 30; i++) raw.push(84.6 - i * 0.07 + Math.sin(i * 2.3) * 0.35);
+    raw[29] = this.state.weight;
+    const min = 77.6, max = 85.2, top = 6, bottom = 90;
+    const y = (v) => Math.round((bottom - ((v - min) / (max - min)) * (bottom - top)) * 10) / 10;
+    const x = (i) => Math.round((4 + (i / 29) * 318) * 10) / 10;
+    const dots = raw.map((v, i) => ({ x: x(i), y: y(v) }));
+    const avg = raw.map((v, i) => {
+      const win = raw.slice(Math.max(0, i - 6), i + 1);
+      return x(i) + ',' + y(win.reduce((a, b) => a + b, 0) / win.length);
+    }).join(' ');
+    const measures = [
+      { name: 'Waist', value: '84.0 cm', delta: '−1.5', good: true },
+      { name: 'Chest', value: '104.0 cm', delta: '+0.5', good: true },
+      { name: 'Arms', value: '38.5 cm', delta: '+0.5', good: true },
+      { name: 'Thighs', value: '60.0 cm', delta: '0.0', good: null },
+      { name: 'Body fat', value: '17.2 %', delta: '−0.9', good: true }
+    ].map((m, i) => ({ ...m, color: m.good ? '#1D6E35' : '#6D6D72', border: i === 0 ? '0' : '0.5px solid #E0E0E5' }));
+    const r = (v) => Math.round(v * 10) / 10;
+    return {
+      dots, avg, measures,
+      weight: this.state.weight.toFixed(1),
+      draft: this.state.draft.toFixed(1),
+      sheet: this.state.sheet,
+      openSheet: () => this.setState({ sheet: true, draft: this.state.weight }),
+      closeSheet: () => this.setState({ sheet: false }),
+      dec: () => this.setState({ draft: r(this.state.draft - 0.1) }),
+      inc: () => this.setState({ draft: r(this.state.draft + 0.1) }),
+      save: () => this.setState({ weight: this.state.draft, sheet: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

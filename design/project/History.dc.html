@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>History — Consistency</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#1E73BE;text-decoration:none}a:hover{color:#165A96}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #EFEFF4; color: #111111; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased">
+  <div style="padding: 16px 16px 100px; display: flex; flex-direction: column; gap: 12px">
+
+    <h1 style="margin: 0; padding: 0 4px; font-size: 32px; line-height: 38px; font-weight: 700; letter-spacing: -0.5px">Progress</h1>
+
+    <div role="tablist" aria-label="Progress area" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 2px; border-radius: 9px; background: #E3E3E8">
+      <a href="Progress.dc.html" role="tab" aria-selected="false" style="display: flex; align-items: center; justify-content: center; height: 30px; border-radius: 7px; font-size: 14px; font-weight: 500; color: #111111">Strength</a>
+      <a href="Body.dc.html" role="tab" aria-selected="false" style="display: flex; align-items: center; justify-content: center; height: 30px; border-radius: 7px; font-size: 14px; font-weight: 500; color: #111111">Body</a>
+      <button type="button" role="tab" aria-selected="true" style="height: 30px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.12); font: inherit; font-size: 14px; font-weight: 600; color: #111111; cursor: pointer">Consistency</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <div style="padding: 12px; border-radius: 12px; background: #FFFFFF"><div style="font-size: 20px; font-weight: 700">13</div><div style="font-size: 12px; color: #6D6D72">Workouts in Oct</div></div>
+      <div style="padding: 12px; border-radius: 12px; background: #FFFFFF"><div style="font-size: 20px; font-weight: 700">12<span style="font-size: 14px; font-weight: 500; color: #6D6D72"> days</span></div><div style="font-size: 12px; color: #6D6D72">Current streak</div></div>
+      <div style="padding: 12px; border-radius: 12px; background: #FFFFFF"><div style="font-size: 20px; font-weight: 700">58<span style="font-size: 14px; font-weight: 500; color: #6D6D72"> min</span></div><div style="font-size: 12px; color: #6D6D72">Avg duration</div></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 12px 12px; border-radius: 14px; background: #FFFFFF">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px">
+        <button type="button" aria-label="Previous month" style="width: 32px; height: 32px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E73BE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+        <span style="font-size: 17px; font-weight: 600">October 2026</span>
+        <button type="button" aria-label="Next month" style="width: 32px; height: 32px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; font-size: 12px; font-weight: 600; color: #6D6D72">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px">
+        <sc-for list="{{cells}}" as="c" hint-placeholder-count="35">
+          <div style="display: flex; align-items: center; justify-content: center; height: 42px">
+            <sc-if value="{{c.day}}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{c.pick}}" aria-label="{{c.aria}}" aria-pressed="{{c.selected}}" style="width: 38px; height: 38px; border: {{c.border}}; border-radius: 19px; background: {{c.bg}}; color: {{c.fg}}; font: inherit; font-size: 15px; font-weight: {{c.weight}}; cursor: pointer; box-sizing: border-box">{{c.day}}</button>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{session}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFFFF; overflow: hidden">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px">
+          <span style="width: 36px; height: 36px; border-radius: 9px; background: #1E73BE; display: flex; align-items: center; justify-content: center; flex: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span>
+          <span style="flex: 1; display: flex; flex-direction: column">
+            <span style="font-size: 16px; font-weight: 600">{{session.name}}</span>
+            <span style="font-size: 13px; color: #6D6D72">{{session.date}} · {{session.mins}} min · {{session.volume}} kg</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B0B0B6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </div>
+        <sc-if value="{{session.pr}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 8px; margin: 0 16px 12px; padding: 8px 10px; border-radius: 10px; background: #FFF4D6; font-size: 13px; font-weight: 600; color: #8A5A00">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A5A00" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8"/></svg>{{session.pr}}
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+    <sc-if value="{{restDay}}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 16px; border-radius: 14px; background: #FFFFFF; font-size: 15px; color: #6D6D72; text-align: center">Rest day — nothing logged</div>
+    </sc-if>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 83px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(249, 249, 251, 0.96); border-top: 0.5px solid #C8C8CE">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Today</a>
+    <a href="Routines.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>Train</a>
+    <a href="Food.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 2.5-3 6s1.5 4 3 4v8"/></svg>Food</a>
+    <a href="Progress.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #1E73BE; font-size: 10px; font-weight: 600">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E73BE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-5 4 3 8-8M15 7h5v5"/></svg>Progress</a>
+    <a href="Body.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Body</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sel: 22 };
+  }
+  renderVals() {
+    const trained = [1, 3, 5, 6, 8, 10, 12, 13, 15, 17, 19, 20, 22];
+    const names = ['Push A', 'Pull A', 'Legs A', 'Push B', 'Pull B', 'Legs B'];
+    const prs = { 8: 'New PR · Bench Press 85 kg × 3', 15: 'New PR · Bench Press 80 kg × 9', 20: 'New PR · Squat 120 kg × 5' };
+    const dows = ['Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed'];
+    const today = 22;
+    const cells = [];
+    for (let i = 0; i < 3; i++) cells.push({ day: 0 });
+    for (let d = 1; d <= 31; d++) {
+      const done = trained.indexOf(d) >= 0;
+      const selected = d === this.state.sel;
+      const future = d > today;
+      cells.push({
+        day: d,
+        selected,
+        aria: d + ' October' + (done ? ', workout logged' : ''),
+        bg: done ? (selected ? '#165A96' : '#1E73BE') : (selected ? '#E8F1FA' : 'transparent'),
+        fg: done ? '#FFFFFF' : (future ? '#A1A1A6' : '#111111'),
+        border: selected && !done ? '2px solid #1E73BE' : (d === today && !done ? '1.5px solid #1E73BE' : '0'),
+        weight: done || selected ? '700' : '400',
+        pick: () => this.setState({ sel: d })
+      });
+    }
+    while (cells.length < 35) cells.push({ day: 0 });
+    const idx = trained.indexOf(this.state.sel);
+    let session = null;
+    if (idx >= 0) {
+      const d = this.state.sel;
+      session = {
+        name: names[idx % names.length],
+        date: (d === today ? 'Today' : dows[(d - 1) % 7] + ' ' + d + ' Oct'),
+        mins: 48 + ((d * 7) % 17),
+        volume: (8200 + ((d * 613) % 3400)).toLocaleString('en-US'),
+        pr: prs[d] || ''
+      };
+    }
+    return { cells, session, restDay: idx < 0 };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Onboarding — goal and targets</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#1E73BE;text-decoration:none}a:hover{color:#165A96}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #EFEFF4; color: #111111; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased">
+  <div style="padding: 12px 16px 110px; display: flex; flex-direction: column; gap: 14px">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; height: 32px">
+      <button type="button" aria-label="Back" style="width: 32px; height: 32px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E73BE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+      <div style="display: flex; gap: 6px" aria-label="Step 3 of 4">
+        <span style="width: 22px; height: 4px; border-radius: 2px; background: #1E73BE"></span>
+        <span style="width: 22px; height: 4px; border-radius: 2px; background: #1E73BE"></span>
+        <span style="width: 22px; height: 4px; border-radius: 2px; background: #1E73BE"></span>
+        <span style="width: 22px; height: 4px; border-radius: 2px; background: #D1D1D6"></span>
+      </div>
+      <span style="width: 32px; font-size: 13px; color: #6D6D72; text-align: right">3/4</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 0 4px">
+      <h1 style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.4px">What's your goal?</h1>
+      <div style="font-size: 15px; color: #6D6D72">We'll set your daily targets from this.</div>
+    </div>
+
+    <div role="radiogroup" aria-label="Goal" style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFFFF; overflow: hidden">
+      <sc-for list="{{goals}}" as="g" hint-placeholder-count="3">
+        <button type="button" role="radio" aria-checked="{{g.sel}}" onClick="{{g.pick}}" style="display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 16px; border: 0; border-top: {{g.border}}; background: transparent; font: inherit; color: #111111; text-align: left; cursor: pointer">
+          <span style="width: 34px; height: 34px; border-radius: 9px; background: {{g.color}}; display: flex; align-items: center; justify-content: center; flex: none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{g.icon}}"/></svg></span>
+          <span style="flex: 1; display: flex; flex-direction: column">
+            <span style="font-size: 16px; font-weight: 600">{{g.title}}</span>
+            <span style="font-size: 13px; color: #6D6D72">{{g.desc}}</span>
+          </span>
+          <span style="width: 22px; height: 22px; border-radius: 11px; box-sizing: border-box; border: {{g.ring}}; background: {{g.dot}}; display: flex; align-items: center; justify-content: center">
+            <sc-if value="{{g.sel}}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></sc-if>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="padding: 0 16px; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: #6D6D72">Activity</div>
+      <div role="radiogroup" aria-label="Activity" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{levels}}" as="l" hint-placeholder-count="3">
+          <button type="button" role="radio" aria-checked="{{l.sel}}" onClick="{{l.pick}}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border: {{l.border}}; border-radius: 12px; background: #FFFFFF; font: inherit; color: #111111; text-align: left; cursor: pointer; box-sizing: border-box">
+            <span style="font-size: 15px; font-weight: 600; color: {{l.fg}}">{{l.title}}</span>
+            <span style="font-size: 12px; color: #6D6D72">{{l.desc}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 14px; background: #FFFFFF">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: #6D6D72">Daily target</span>
+        <span style="font-size: 30px; font-weight: 700; letter-spacing: -0.5px">{{kcal}}<span style="font-size: 15px; font-weight: 500; color: #6D6D72"> kcal</span></span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <div style="padding: 10px; border-radius: 10px; background: #E8F1FA"><div style="font-size: 12px; color: #165A96">Protein</div><div style="font-size: 17px; font-weight: 700">{{p}} g</div></div>
+        <div style="padding: 10px; border-radius: 10px; background: #FDEFD9"><div style="font-size: 12px; color: #8A4B00">Carbs</div><div style="font-size: 17px; font-weight: 700">{{c}} g</div></div>
+        <div style="padding: 10px; border-radius: 10px; background: #EFE7FB"><div style="font-size: 12px; color: #5B36A0">Fat</div><div style="font-size: 17px; font-weight: 700">{{f}} g</div></div>
+      </div>
+      <div style="font-size: 13px; color: #6D6D72">Based on 82.4 kg, 180 cm, 26 y (Mifflin-St Jeor). You can edit any number later in Settings.</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px 30px; background: #EFEFF4">
+    <a href="Main.dc.html" style="display: flex; align-items: center; justify-content: center; height: 50px; border-radius: 12px; background: #1E73BE; color: #FFFFFF; font-size: 17px; font-weight: 600">Continue</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { goal: 'cut', level: 'active' };
+  }
+  renderVals() {
+    const ic = {
+      down: 'M12 4v16M6 14l6 6 6-6',
+      equal: 'M5 9h14M5 15h14',
+      up: 'M12 20V4M6 10l6-6 6 6'
+    };
+    const G = [
+      { id: 'cut', title: 'Lose fat', desc: 'Small deficit, keep strength', color: '#E8890C', icon: ic.down, adj: -300 },
+      { id: 'keep', title: 'Maintain', desc: 'Recomp at maintenance', color: '#1E9BD7', icon: ic.equal, adj: 0 },
+      { id: 'bulk', title: 'Build muscle', desc: 'Lean surplus', color: '#23843F', icon: ic.up, adj: 250 }
+    ];
+    const L = [
+      { id: 'light', title: 'Light', desc: '1–2 workouts / wk', k: 1.375 },
+      { id: 'moderate', title: 'Moderate', desc: '3 workouts / wk', k: 1.55 },
+      { id: 'active', title: 'Active', desc: '4–5 workouts / wk', k: 1.725 }
+    ];
+    const s = this.state;
+    const goals = G.map((g, i) => {
+      const sel = g.id === s.goal;
+      return { ...g, sel, border: i === 0 ? '0' : '0.5px solid #E0E0E5', ring: sel ? '0' : '1.5px solid #C7C7CC', dot: sel ? '#1E73BE' : 'transparent', pick: () => this.setState({ goal: g.id }) };
+    });
+    const levels = L.map((l) => {
+      const sel = l.id === s.level;
+      return { ...l, sel, border: sel ? '2px solid #1E73BE' : '2px solid transparent', fg: sel ? '#1E73BE' : '#111111', pick: () => this.setState({ level: l.id }) };
+    });
+    const bmr = 10 * 82.4 + 6.25 * 180 - 5 * 26 + 5;
+    const g = G.find((x) => x.id === s.goal), l = L.find((x) => x.id === s.level);
+    const kcal = Math.round((bmr * l.k + g.adj) / 50) * 50;
+    const p = 180, f = Math.round((kcal * 0.284) / 9);
+    const c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
+    return { goals, levels, kcal: kcal.toLocaleString('en-US'), p, c, f };
+  }
+}
+</script>
+</body>
+</html>

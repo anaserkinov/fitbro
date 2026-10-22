@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Progress — Strength</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#1E73BE;text-decoration:none}a:hover{color:#165A96}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #EFEFF4; color: #111111; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased">
+  <div style="padding: 16px 16px 100px; display: flex; flex-direction: column; gap: 12px">
+
+    <h1 style="margin: 0; padding: 0 4px; font-size: 32px; line-height: 38px; font-weight: 700; letter-spacing: -0.5px">Progress</h1>
+
+    <div role="tablist" aria-label="Progress area" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 2px; border-radius: 9px; background: #E3E3E8">
+      <button type="button" role="tab" aria-selected="true" style="height: 30px; border: 0; border-radius: 7px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.12); font: inherit; font-size: 14px; font-weight: 600; color: #111111; cursor: pointer">Strength</button>
+      <a href="Body.dc.html" role="tab" aria-selected="false" style="display: flex; align-items: center; justify-content: center; height: 30px; border-radius: 7px; font-size: 14px; font-weight: 500; color: #111111">Body</a>
+      <a href="History.dc.html" role="tab" aria-selected="false" style="display: flex; align-items: center; justify-content: center; height: 30px; border-radius: 7px; font-size: 14px; font-weight: 500; color: #111111">Consistency</a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 14px; background: #FFFFFF">
+      <button type="button" style="align-self: flex-start; display: flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; font: inherit; font-size: 16px; font-weight: 600; color: #1E73BE; cursor: pointer">
+        Barbell Bench Press
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E73BE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div style="display: flex; align-items: flex-end; justify-content: space-between">
+        <div>
+          <div style="font-size: 13px; color: #6D6D72">Estimated 1RM</div>
+          <div style="font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -0.5px">101.3<span style="font-size: 16px; font-weight: 500; color: #6D6D72"> kg</span></div>
+        </div>
+        <div style="height: 26px; display: flex; align-items: center; padding: 0 10px; border-radius: 13px; background: #E6F4EA; color: #1D6E35; font-size: 13px; font-weight: 700">{{delta}}</div>
+      </div>
+      <svg width="326" height="116" viewBox="0 0 326 116" role="img" aria-label="{{chartLabel}}">
+        <line x1="0" y1="8" x2="326" y2="8" stroke="#EDEDF2" stroke-width="1"/>
+        <line x1="0" y1="58" x2="326" y2="58" stroke="#EDEDF2" stroke-width="1"/>
+        <line x1="0" y1="108" x2="326" y2="108" stroke="#EDEDF2" stroke-width="1"/>
+        <polygon points="{{area}}" fill="#1E73BE" fill-opacity="0.10"/>
+        <polyline points="{{line}}" fill="none" stroke="#1E73BE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="{{lastX}}" cy="{{lastY}}" r="5" fill="#FFFFFF" stroke="#1E73BE" stroke-width="2.5"/>
+      </svg>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6D6D72"><span>{{startLabel}}</span><span>Now</span></div>
+      <div role="tablist" aria-label="Range" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+        <sc-for list="{{ranges}}" as="r" hint-placeholder-count="4">
+          <button type="button" role="tab" aria-selected="{{r.sel}}" onClick="{{r.pick}}" style="height: 30px; border: 0; border-radius: 8px; background: {{r.bg}}; color: {{r.fg}}; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">{{r.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="padding: 0 16px; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: #6D6D72">Personal records</div>
+      <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFFFF; overflow: hidden">
+        <div style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 16px">
+          <span style="width: 28px; height: 28px; border-radius: 7px; background: #E8A400; display: flex; align-items: center; justify-content: center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8"/></svg></span>
+          <span style="flex: 1; font-size: 16px">Heaviest set</span>
+          <span style="font-size: 16px; font-weight: 600">85 kg × 3</span>
+          <span style="width: 44px; text-align: right; font-size: 13px; color: #6D6D72">8 Oct</span>
+        </div>
+        <div style="height: 0.5px; margin-left: 56px; background: #E0E0E5"></div>
+        <div style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 16px">
+          <span style="width: 28px; height: 28px; border-radius: 7px; background: #1E73BE; display: flex; align-items: center; justify-content: center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-5 4 3 8-8M15 7h5v5"/></svg></span>
+          <span style="flex: 1; font-size: 16px">Most reps at 80 kg</span>
+          <span style="font-size: 16px; font-weight: 600">9 reps</span>
+          <span style="width: 44px; text-align: right; font-size: 13px; color: #6D6D72">15 Oct</span>
+        </div>
+        <div style="height: 0.5px; margin-left: 56px; background: #E0E0E5"></div>
+        <div style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 16px">
+          <span style="width: 28px; height: 28px; border-radius: 7px; background: #8E5BD8; display: flex; align-items: center; justify-content: center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 20h16M7 16V10M12 16V5M17 16v-8"/></svg></span>
+          <span style="flex: 1; font-size: 16px">Best session volume</span>
+          <span style="font-size: 16px; font-weight: 600">3,120 kg</span>
+          <span style="width: 44px; text-align: right; font-size: 13px; color: #6D6D72">15 Oct</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; justify-content: space-between; padding: 0 16px; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: #6D6D72"><span>Sets per muscle · this week</span></div>
+      <div style="display: flex; flex-direction: column; gap: 9px; padding: 14px 16px; border-radius: 14px; background: #FFFFFF">
+        <sc-for list="{{muscles}}" as="m" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 82px minmax(0, 1fr) 24px; gap: 10px; align-items: center">
+            <span style="font-size: 14px">{{m.name}}</span>
+            <div style="height: 8px; border-radius: 4px; background: #EDEDF2"><div style="width: {{m.pct}}; height: 8px; border-radius: 4px; background: #1E73BE"></div></div>
+            <span style="font-size: 14px; font-weight: 600; text-align: right">{{m.sets}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 83px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(249, 249, 251, 0.96); border-top: 0.5px solid #C8C8CE">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Today</a>
+    <a href="Routines.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>Train</a>
+    <a href="Food.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 2.5-3 6s1.5 4 3 4v8"/></svg>Food</a>
+    <a href="Progress.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #1E73BE; font-size: 10px; font-weight: 600">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E73BE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-5 4 3 8-8M15 7h5v5"/></svg>Progress</a>
+    <a href="Body.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; color: #6D6D72; font-size: 10px; font-weight: 500">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6D6D72" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Body</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { range: '3M' };
+  }
+  series() {
+    const out = [];
+    for (let w = 0; w < 52; w++) {
+      const back = 51 - w;
+      out.push(101.3 - back * 0.27 + (back === 0 ? 0 : Math.sin(w * 1.7) * 0.6));
+    }
+    return out;
+  }
+  renderVals() {
+    const spans = { '1M': 4, '3M': 12, '6M': 26, '1Y': 52 };
+    const starts = { '1M': '4 weeks ago', '3M': '12 weeks ago', '6M': '6 months ago', '1Y': '1 year ago' };
+    const n = spans[this.state.range];
+    const data = this.series().slice(-n);
+    const min = Math.min(...data) - 0.5, max = Math.max(...data) + 0.5;
+    const W = 320, H = 116, top = 8, bottom = 108;
+    const pts = data.map((v, i) => {
+      const x = 3 + (i / (data.length - 1)) * W;
+      const y = bottom - ((v - min) / (max - min)) * (bottom - top);
+      return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+    });
+    const line = pts.map((p) => p.join(',')).join(' ');
+    const last = pts[pts.length - 1];
+    const area = line + ' ' + last[0] + ',' + H + ' ' + pts[0][0] + ',' + H;
+    const d = data[data.length - 1] - data[0];
+    const ranges = ['1M', '3M', '6M', '1Y'].map((r) => {
+      const sel = r === this.state.range;
+      return { label: r, sel, bg: sel ? '#E8F1FA' : 'transparent', fg: sel ? '#1E73BE' : '#6D6D72', pick: () => this.setState({ range: r }) };
+    });
+    const muscles = [
+      { name: 'Back', sets: 16 }, { name: 'Chest', sets: 14 }, { name: 'Legs', sets: 12 },
+      { name: 'Shoulders', sets: 10 }, { name: 'Arms', sets: 9 }
+    ].map((m) => ({ ...m, pct: Math.round((m.sets / 20) * 100) + '%' }));
+    return {
+      line, area, lastX: last[0], lastY: last[1],
+      delta: (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + ' kg',
+      startLabel: starts[this.state.range],
+      chartLabel: 'Estimated 1RM trend, ' + starts[this.state.range] + ' to now',
+      ranges, muscles
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+import * as T from '../schema.js';
+import { db } from 'sdk';
+import { eq } from 'sdk/db';
+import * as v from './validate.js';
+import { refuse } from './endpoint.js';
+import { updateUser, refreshTargets, markOnboarded, getUser, deleteAllData } from './users.js';
+import { logWeight } from './body.js';
+import { ensureDefaultReminders, listReminders, updateReminder as saveReminder, rescheduleAll } from './reminders.js';
+import { seedCatalog } from './catalog.js';
+import { getActiveWorkout } from './workouts.js';
+
+// Profile, onboarding and settings — the Mini App's account screens.
+
+export async function getMe(user) {
+  const active = await getActiveWorkout(user.id);
+  return { user, onboarded: !!user.onboardedAt, activeWorkoutId: active ? active.id : null };
+}
+
+const REQUIRED = ['sex', 'birthDate', 'heightCm', 'activityLevel', 'goal', 'weightKg'];
+
+// The setup wizard's final step: profile + first weigh-in → targets, default
+// reminders, catalogue. Can be re-run from Settings › Edit profile.
+export async function completeOnboarding(user, input) {
+  for (const k of REQUIRED) if (input[k] === undefined || input[k] === null || input[k] === '') v.invalid(`${k} is required`, k);
+  const { weightKg, ...profile } = input;
+  let u = await updateUser(user.id, profile);   // first, so "today" uses the new timezone
+  await logWeight(u, { weightKg });
+  u = await refreshTargets(u);
+  await ensureDefaultReminders(u);
+  if (u.timezone !== user.timezone) await rescheduleAll(u);
+  if ((await db.$count(T.exercises, eq(T.exercises.userId, 0))) === 0) await seedCatalog();
+  if (!u.onboardedAt) await markOnboarded(u.id);
+  return getMe(await getUser(u.id));
+}
+
+export async function getSettings(user) {
+  return { user, reminders: await listReminders(user.id) };
+}
+
+export async function updateSettings(user, input) {
+  const u = await updateUser(user.id, input);
+  if (u.timezone !== user.timezone) await rescheduleAll(u);
+  return getSettings(u);
+}
+
+export async function updateReminder(user, input) {
+  const { type, ...rest } = input;
+  return { reminder: await saveReminder(user, type, rest) };
+}
+
+// Needs { confirm: 'DELETE' } so a stray call can't wipe an account.
+export async function deleteMyData(user, input) {
+  if (input.confirm !== 'DELETE') refuse('Send confirm: "DELETE" to delete all your data', 'CONFIRM_REQUIRED');
+  await deleteAllData(user.id);
+  return { deleted: true };
+}

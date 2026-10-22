@@ -1,0 +1,24 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-22T12:00:00Z"},
+  "title": "Gym Bro Mini App",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 390, "h": 844, "title": "Home", "is_interactive": true, "radius": 28},
+    "Workout.dc.html": {"x": 470, "y": 0, "w": 390, "h": 844, "title": "Live workout", "is_interactive": true, "radius": 28},
+    "Food.dc.html": {"x": 940, "y": 0, "w": 390, "h": 844, "title": "Food diary", "is_interactive": true, "radius": 28},
+    "Progress.dc.html": {"x": 1410, "y": 0, "w": 390, "h": 844, "title": "Progress", "is_interactive": true, "radius": 28},
+    "Body.dc.html": {"x": 1880, "y": 0, "w": 390, "h": 844, "title": "Body", "is_interactive": true, "radius": 28},
+    "History.dc.html": {"x": 0, "y": 964, "w": 390, "h": 844, "title": "History", "is_interactive": true, "radius": 28},
+    "Routines.dc.html": {"x": 470, "y": 964, "w": 390, "h": 844, "title": "Routines", "is_interactive": true, "radius": 28},
+    "Exercises.dc.html": {"x": 940, "y": 964, "w": 390, "h": 844, "title": "Exercise library", "is_interactive": true, "radius": 28},
+    "Settings.dc.html": {"x": 1410, "y": 964, "w": 390, "h": 844, "title": "Settings", "is_interactive": true, "radius": 28},
+    "Onboarding.dc.html": {"x": 1880, "y": 964, "w": 390, "h": 844, "title": "Onboarding — targets", "is_interactive": true, "radius": 28}
+  },
+  "order": ["Main.dc.html", "Workout.dc.html", "Food.dc.html", "Progress.dc.html", "Body.dc.html", "History.dc.html", "Routines.dc.html", "Exercises.dc.html", "Settings.dc.html", "Onboarding.dc.html"],
+  "notes": {
+    "t1": {"x": 0, "y": -300, "text": "Gym Bro — Mini App preview", "kind": "title1", "maxW": 2270}
+  },
+  "designSystems": []
+}
