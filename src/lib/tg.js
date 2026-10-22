@@ -22,6 +22,21 @@ export function initTelegram() {
     tg.setBackgroundColor('secondary_bg_color');
   }
   if (supports('7.7')) tg.disableVerticalSwipes();
+  if (supports('8.0')) {
+    syncSafeArea();
+    tg.onEvent('safeAreaChanged', syncSafeArea);
+    tg.onEvent('contentSafeAreaChanged', syncSafeArea);
+  }
+}
+
+// telegram-web-app.js normally sets these itself; writing them from the JS values
+// too keeps styles.css right if a client only reports insets through the API.
+function syncSafeArea() {
+  const root = document.documentElement.style;
+  for (const [prefix, inset] of [['safe-area-inset', tg.safeAreaInset], ['content-safe-area-inset', tg.contentSafeAreaInset]]) {
+    if (!inset) continue;
+    for (const side of ['top', 'right', 'bottom', 'left']) root.setProperty(`--tg-${prefix}-${side}`, `${inset[side] || 0}px`);
+  }
 }
 
 export const haptic = {

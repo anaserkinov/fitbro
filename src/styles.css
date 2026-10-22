@@ -29,7 +29,15 @@
 
   --radius: 14px;
   --tabbar-h: 58px;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Safe area = the device's insets (notch, home indicator) + what Telegram's own
+     controls cover (in fullscreen: the close/⋯ buttons). Telegram (Bot API 8.0+)
+     reports both as --tg-* variables; env() covers older clients and browsers. */
+  --safe-top: calc(max(var(--tg-safe-area-inset-top, 0px), env(safe-area-inset-top, 0px)) + var(--tg-content-safe-area-inset-top, 0px));
+  --safe-right: calc(max(var(--tg-safe-area-inset-right, 0px), env(safe-area-inset-right, 0px)) + var(--tg-content-safe-area-inset-right, 0px));
+  --safe-bottom: calc(max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px)) + var(--tg-content-safe-area-inset-bottom, 0px));
+  --safe-left: calc(max(var(--tg-safe-area-inset-left, 0px), env(safe-area-inset-left, 0px)) + var(--tg-content-safe-area-inset-left, 0px));
+  /* Visible height: Telegram's stable viewport (doesn't jump while the sheet is dragged). */
+  --app-height: var(--tg-viewport-stable-height, 100vh);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
@@ -59,7 +67,7 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text); }
-body { min-height: 100vh; overscroll-behavior: none; }
+body { min-height: var(--app-height); overscroll-behavior: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: var(--link); text-decoration: none; }
@@ -72,10 +80,10 @@ svg { flex: none; }
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 16px calc(var(--tabbar-h) + 24px + var(--safe-bottom));
+  padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(var(--tabbar-h) + 24px + var(--safe-bottom)) calc(16px + var(--safe-left));
   max-width: 640px;
   margin: 0 auto;
-  min-height: 100vh;
+  min-height: var(--app-height);
 }
 .screen.sub { padding-bottom: calc(96px + var(--safe-bottom)); }
 .title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 4px 4px 0; }
@@ -197,14 +205,14 @@ textarea.input { height: auto; min-height: 80px; padding: 10px 12px; resize: ver
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; height: calc(var(--tabbar-h) + var(--safe-bottom));
-  padding-bottom: var(--safe-bottom);
+  padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
   display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
   background: color-mix(in srgb, var(--card) 94%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   border-top: 0.5px solid var(--sep);
 }
 .tabbar button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 8px; border: 0; background: transparent; color: var(--hint); font-size: 10px; font-weight: 500; }
 .tabbar button[aria-current='page'] { color: var(--link); font-weight: 600; }
-.mainbtn-wrap { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 10px 16px calc(10px + var(--safe-bottom)); background: var(--bg); border-top: 0.5px solid var(--sep); }
+.mainbtn-wrap { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 10px calc(16px + var(--safe-right)) calc(10px + var(--safe-bottom)) calc(16px + var(--safe-left)); background: var(--bg); border-top: 0.5px solid var(--sep); }
 .mainbtn-wrap .btn { width: 100%; max-width: 608px; margin: 0 auto; display: flex; }
 .devbar { display: flex; align-items: center; gap: 2px; height: 32px; font-size: 17px; background: none; border: 0; color: var(--link); padding: 0; align-self: flex-start; }
 
@@ -212,8 +220,8 @@ textarea.input { height: auto; min-height: 80px; padding: 10px 12px; resize: ver
 
 .backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.35); display: flex; flex-direction: column; justify-content: flex-end; animation: fade 0.18s ease-out; }
 .sheet {
-  background: var(--card); border-radius: 14px 14px 0 0; padding: 8px 16px calc(20px + var(--safe-bottom));
-  display: flex; flex-direction: column; gap: 16px; max-height: 92vh; overflow-y: auto; animation: rise 0.22s ease-out;
+  background: var(--card); border-radius: 14px 14px 0 0; padding: 8px calc(16px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  display: flex; flex-direction: column; gap: 16px; max-height: calc(var(--app-height) * 0.92 - var(--safe-top)); overflow-y: auto; animation: rise 0.22s ease-out;
   width: 100%; max-width: 640px; margin: 0 auto;
 }
 .sheet.gray { background: var(--bg); }
@@ -273,7 +281,7 @@ textarea.input { height: auto; min-height: 80px; padding: 10px 12px; resize: ver
 .photo-tile .cap { position: relative; margin: 6px; padding: 2px 6px; border-radius: 6px; background: rgba(0, 0, 0, 0.45); color: #FFFFFF; font-size: 11px; font-weight: 600; }
 .photo-add { aspect-ratio: 3 / 4; border-radius: 12px; border: 1.5px dashed color-mix(in srgb, var(--hint) 60%, transparent); background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--link); font-size: 13px; font-weight: 600; }
 .toast {
-  position: fixed; left: 16px; right: 16px; top: 12px; z-index: 60; max-width: 520px; margin: 0 auto;
+  position: fixed; left: calc(16px + var(--safe-left)); right: calc(16px + var(--safe-right)); top: calc(12px + var(--safe-top)); z-index: 60; max-width: 520px; margin: 0 auto;
   padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--text) 88%, transparent); color: var(--bg);
   font-size: 15px; font-weight: 500; display: flex; gap: 10px; align-items: center; animation: rise 0.2s ease-out;
 }
