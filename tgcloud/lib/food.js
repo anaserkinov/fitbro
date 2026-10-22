@@ -1,11 +1,12 @@
 import { db } from 'sdk';
-import { eq, and, inArray, isNull, isNotNull, asc, desc, sql } from 'sdk/db';
+import { eq, and, or, inArray, isNull, isNotNull, asc, desc, sql } from 'sdk/db';
 import * as T from '../schema.js';
 import * as v from './validate.js';
 import { own, visible } from './db-util.js';
 import { today } from './users.js';
 import { gramsFor, nutrientsFor, sumNutrients, recipePer100 } from './nutrition.js';
 import { lookupBarcode as offLookup, cleanBarcode } from './openfoodfacts.js';
+import { catalogName, catalogSearch } from './i18n/catalog.js';
 
 const F = T.foods, FL = T.foodLogs, WL = T.waterLogs, FAV = T.favoriteFoods, RI = T.recipeItems;
 export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -69,8 +70,13 @@ export async function searchFoods(user, input = {}) {
   }
 
   const needle = q.toLowerCase().replace(/[%_]/g, '');
-  const rows = await db.select().from(F).where(and(live, sql`lower(${F.name}) LIKE ${'%' + needle + '%'}`)).limit(200).all();
-  const score = (f) => [SOURCE_RANK[f.source] ?? 3, f.name.toLowerCase().startsWith(needle) ? 0 : 1, f.name.length];
+  // Built-in foods also match on their name in the user's language.
+  const byName = sql`lower(${F.name}) LIKE ${'%' + needle + '%'}`;
+  const translated = catalogSearch(user.language, needle);
+  const match = translated.length ? or(byName, and(eq(F.source, 'builtin'), inArray(F.name, translated))) : byName;
+  const rows = await db.select().from(F).where(and(live, match)).limit(200).all();
+  const shown = (f) => (f.source === 'builtin' ? catalogName(user.language, f.name) : f.name).toLowerCase();
+  const score = (f) => [SOURCE_RANK[f.source] ?? 3, shown(f).startsWith(needle) ? 0 : 1, shown(f).length];
   rows.sort((a, b) => {
     const sa = score(a), sb = score(b);
     return sa[0] - sb[0] || sa[1] - sb[1] || sa[2] - sb[2];

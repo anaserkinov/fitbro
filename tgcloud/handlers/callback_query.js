@@ -7,6 +7,7 @@ import { ensureUser } from '../lib/users.js';
 import { isEndpointError } from '../lib/validate.js';
 import { getActiveWorkout } from '../lib/workouts.js';
 import { needsSetup } from '../lib/bot/ui.js';
+import { tr } from '../lib/i18n/bot.js';
 import * as chat from '../lib/bot/chat.js';
 import { onWorkoutButton, showCard } from '../lib/bot/workout.js';
 
@@ -16,14 +17,15 @@ export default async function (query) {
   const chatId = query.message.chat.id;
   const messageId = query.message.message_id;
   const user = await ensureUser(query.from);
+  const t = tr(user);
   const [kind, action, arg] = query.data.split(':');
 
   try {
-    if (!user.onboardedAt) { await needsSetup(chatId); return answer(); }
+    if (!user.onboardedAt) { await needsSetup(user, chatId); return answer(); }
     let text = '';
     if (kind === 'w' && action === 'show') {
       const active = await getActiveWorkout(user.id);
-      if (active) await showCard(user, chatId, active.id); else text = 'No workout running';
+      if (active) await showCard(user, chatId, active.id); else text = t('No workout running');
     } else if (kind === 'w') {
       text = await onWorkoutButton(user, chatId, messageId, query.data);
     } else if (kind === 'h2o') {
@@ -35,8 +37,8 @@ export default async function (query) {
     }
     return answer(text);
   } catch (e) {
-    if (isEndpointError(e)) return answer(e.message);
+    if (isEndpointError(e)) return answer(t(e.message));
     console.error('callback failed', query.data, e);
-    return answer('Something went wrong — try again');
+    return answer(t('Something went wrong — try again'));
   }
 }

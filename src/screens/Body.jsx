@@ -6,12 +6,16 @@ import { Loader, Section, Sheet, Stepper, Segmented, NumberInput, Empty, toast, 
 import { LineChart } from '../ui/charts.jsx';
 import { Icon } from '../ui/icons.jsx';
 import { haptic, confirmDialog } from '../lib/tg.js';
+import { t } from '../lib/i18n.js';
 
 const MEASURES = [
   ['waistCm', 'Waist', 'cm', true], ['chestCm', 'Chest', 'cm'], ['armsCm', 'Arms', 'cm'], ['thighsCm', 'Thighs', 'cm'],
   ['hipsCm', 'Hips', 'cm', true], ['neckCm', 'Neck', 'cm'], ['bodyFatPct', 'Body fat', '%', true],
 ];
-const POSES = [{ value: 'front', label: 'Front' }, { value: 'side', label: 'Side' }, { value: 'back', label: 'Back' }];
+// Labels are translation keys; '@pose' keeps 'Back' apart from the muscle group.
+const POSE_LABEL = { front: 'Front@pose', side: 'Side@pose', back: 'Back@pose' };
+const poseOptions = () => Object.entries(POSE_LABEL).map(([value, label]) => ({ value, label: t(label) }));
+const poseName = (pose) => t(POSE_LABEL[pose] || pose);
 
 // Downscale to ≤1600 px JPEG before upload: phone photos are often 5–10 MB.
 async function toJpegBase64(file) {
@@ -43,16 +47,16 @@ function usePhoto(id) {
 function PhotoTile({ photo, onOpen }) {
   const src = usePhoto(photo.id);
   return (
-    <button type="button" className="photo-tile" onClick={() => onOpen(photo)} aria-label={`${photo.pose} photo, ${shortDay(photo.localDate)}`}>
+    <button type="button" className="photo-tile" onClick={() => onOpen(photo)} aria-label={t('{pose} photo, {date}', { pose: poseName(photo.pose), date: shortDay(photo.localDate) })}>
       {src && <img src={src} alt="" />}
-      <span className="cap">{photo.pose[0].toUpperCase() + photo.pose.slice(1)} · {shortDay(photo.localDate)}</span>
+      <span className="cap">{poseName(photo.pose)} · {shortDay(photo.localDate)}</span>
     </button>
   );
 }
 
 function PhotoImg({ photo }) {
   const src = usePhoto(photo.id);
-  return src ? <img src={src} alt={`${photo.pose} ${photo.localDate}`} style={{ width: '100%', borderRadius: 12, display: 'block' }} /> : <div className="photo-tile" />;
+  return src ? <img src={src} alt={`${poseName(photo.pose)} ${photo.localDate}`} style={{ width: '100%', borderRadius: 12, display: 'block' }} /> : <div className="photo-tile" />;
 }
 
 function WeightSheet({ open, onClose, latestKg, onSaved }) {
@@ -70,11 +74,11 @@ function WeightSheet({ open, onClose, latestKg, onSaved }) {
     } catch (e) { toastError(e); } finally { setBusy(false); }
   }
   return (
-    <Sheet open={open} onClose={onClose} title="Log weight" right={<span className="hint">{shortDay(today)}</span>}>
-      <Stepper value={v} step={0.1} unit={fmt.weightUnit} label="weight" onChange={setV} />
-      <NumberInput value={v} decimals={1} label="Weight" onCommit={(x) => x && setV(x)} className="input center" />
-      <button type="button" className="btn lg block" disabled={busy} onClick={save}>Save</button>
-      <p className="small hint center">Logging again today replaces today's weigh-in.</p>
+    <Sheet open={open} onClose={onClose} title={t('Log weight')} right={<span className="hint">{shortDay(today)}</span>}>
+      <Stepper value={v} step={0.1} unit={fmt.weightLabel} label={t('weight')} onChange={setV} />
+      <NumberInput value={v} decimals={1} label={t('Weight')} onCommit={(x) => x && setV(x)} className="input center" />
+      <button type="button" className="btn lg block" disabled={busy} onClick={save}>{t('Save')}</button>
+      <p className="small hint center">{t("Logging again today replaces today's weigh-in.")}</p>
     </Sheet>
   );
 }
@@ -95,15 +99,15 @@ function MeasureSheet({ open, onClose, latest, onSaved }) {
     } catch (e) { toastError(e); } finally { setBusy(false); }
   }
   return (
-    <Sheet open={open} onClose={onClose} title="Measurements">
+    <Sheet open={open} onClose={onClose} title={t('Measurements')}>
       <div className="grid2">
         {MEASURES.map(([key, label, unit]) => (
-          <label key={key} className="form-row"><span className="label">{label}, {unit}</span>
-            <NumberInput value={v[key] ?? null} placeholder={latest?.[key] ? String(latest[key].value) : '—'} onCommit={(x) => setV({ ...v, [key]: x })} label={label} /></label>
+          <label key={key} className="form-row"><span className="label">{t(label)}, {t(unit)}</span>
+            <NumberInput value={v[key] ?? null} placeholder={latest?.[key] ? String(latest[key].value) : '—'} onCommit={(x) => setV({ ...v, [key]: x })} label={t(label)} /></label>
         ))}
       </div>
-      <button type="button" className="btn lg block" disabled={busy} onClick={save}>Save</button>
-      <p className="small hint center">Fill in only what you measured today.</p>
+      <button type="button" className="btn lg block" disabled={busy} onClick={save}>{t('Save')}</button>
+      <p className="small hint center">{t('Fill in only what you measured today.')}</p>
     </Sheet>
   );
 }
@@ -121,7 +125,7 @@ export default function Body() {
   const fileRef = useRef(null);
 
   async function pickFile(file) {
-    try { setUpload({ dataUrl: await toJpegBase64(file), pose: 'front' }); } catch { toast('Could not read that image'); }
+    try { setUpload({ dataUrl: await toJpegBase64(file), pose: 'front' }); } catch { toast(t('Could not read that image')); }
   }
 
   async function sendPhoto() {
@@ -130,20 +134,20 @@ export default function Body() {
       await mutate('uploadPhoto', { imageBase64: upload.dataUrl, pose: upload.pose }, AFFECTS.body);
       haptic.success();
       setUpload(null);
-      toast('Photo saved');
+      toast(t('Photo saved'));
     } catch (e) { toastError(e); } finally { setBusy(false); }
   }
 
   async function deletePhoto(p) {
-    if (!(await confirmDialog('Delete this photo?'))) return;
+    if (!(await confirmDialog(t('Delete this photo?')))) return;
     try { await mutate('deletePhoto', { id: p.id }, AFFECTS.body); setViewer(null); } catch (e) { toastError(e); }
   }
 
   return (
     <div className="screen">
       <div className="title-row" style={{ alignItems: 'center' }}>
-        <h1 className="large-title">Body</h1>
-        <button type="button" className="icon-btn" aria-label="Settings" onClick={() => nav.push('Settings')}><Icon name="sliders" size={20} /></button>
+        <h1 className="large-title">{t('Body')}</h1>
+        <button type="button" className="icon-btn" aria-label={t('Settings')} onClick={() => nav.push('Settings')}><Icon name="sliders" size={20} /></button>
       </div>
       <Loader q={q}>
         {(b) => {
@@ -154,25 +158,25 @@ export default function Body() {
               <div className="card">
                 <div className="row-between" style={{ alignItems: 'flex-end' }}>
                   <div>
-                    <div className="small hint">Weight{w.latest ? ` · ${shortDay(w.latest.date)}` : ''}</div>
-                    <div className="big-num">{w.latest ? fmt.wNum(w.latest.weightKg) : '—'}<span className="unit"> {fmt.weightUnit}</span></div>
+                    <div className="small hint">{t('Weight')}{w.latest ? ` · ${shortDay(w.latest.date)}` : ''}</div>
+                    <div className="big-num">{w.latest ? fmt.wNum(w.latest.weightKg) : '—'}<span className="unit"> {fmt.weightLabel}</span></div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div className="small hint">7-day average</div>
+                    <div className="small hint">{t('7-day average')}</div>
                     <div className="bold" style={{ fontSize: 17 }}>{w.avg7Kg ? fmt.w(w.avg7Kg) : '—'}</div>
-                    {w.weekChangeKg !== null && <div className="small bold" style={{ color: (user.goal === 'bulk' ? w.weekChangeKg > 0 : w.weekChangeKg < 0) ? 'var(--good)' : 'var(--hint)' }}>{signed(fmt.wNum(w.weekChangeKg))} {fmt.weightUnit} / week</div>}
+                    {w.weekChangeKg !== null && <div className="small bold" style={{ color: (user.goal === 'bulk' ? w.weekChangeKg > 0 : w.weekChangeKg < 0) ? 'var(--good)' : 'var(--hint)' }}>{t('{change} {unit} / week', { change: signed(fmt.wNum(w.weekChangeKg)), unit: fmt.weightLabel })}</div>}
                   </div>
                 </div>
                 <LineChart series={w.series.map((p) => ({ y: fmt.wNum(p.weightKg) }))} line={w.series.map((p) => fmt.wNum(p.avg7Kg))} dots color="var(--fat)"
-                  goal={w.goalWeightKg ? fmt.wNum(w.goalWeightKg) : null} height={96} label="Weight over the last 30 days" />
+                  goal={w.goalWeightKg ? fmt.wNum(w.goalWeightKg) : null} height={96} label={t('Weight over the last 30 days')} />
                 <div className="row-between small hint">
-                  <span>{w.goalWeightKg ? `Goal ${fmt.w(w.goalWeightKg)}` : 'No goal set'}</span>
-                  {w.projectedGoalDate && <span>On pace for <span className="bold" style={{ color: 'var(--text)' }}>{shortDay(w.projectedGoalDate)}</span></span>}
+                  <span>{w.goalWeightKg ? t('Goal {w}', { w: fmt.w(w.goalWeightKg) }) : t('No goal set')}</span>
+                  {w.projectedGoalDate && <span>{t('On pace for')} <span className="bold" style={{ color: 'var(--text)' }}>{shortDay(w.projectedGoalDate)}</span></span>}
                 </div>
-                <button type="button" className="btn block" onClick={() => setWeightOpen(true)}>Log weight</button>
+                <button type="button" className="btn block" onClick={() => setWeightOpen(true)}>{t('Log weight')}</button>
               </div>
 
-              <Section title="Measurements" action={<button type="button" onClick={() => setMeasureOpen(true)}>Log</button>}>
+              <Section title={t('Measurements')} action={<button type="button" onClick={() => setMeasureOpen(true)}>{t('Log')}</button>}>
                 {m.latest && Object.keys(m.latest).length ? (
                   <div className="list">
                     {MEASURES.filter(([k]) => m.latest[k]).map(([k, label, unit, lowerIsBetter]) => {
@@ -180,45 +184,45 @@ export default function Body() {
                       const good = d !== undefined && d !== 0 && (lowerIsBetter ? d < 0 : d > 0);
                       return (
                         <div key={k} className="row">
-                          <span className="grow"><span className="row-title">{label}</span></span>
-                          <span className="bold">{m.latest[k].value} {unit}</span>
+                          <span className="grow"><span className="row-title">{t(label)}</span></span>
+                          <span className="bold">{fmt.n(m.latest[k].value, 1).replace(/[.,]0$/, '')} {t(unit)}</span>
                           <span className="small bold" style={{ width: 52, textAlign: 'right', color: good ? 'var(--good)' : 'var(--hint)' }}>{d !== undefined ? signed(d) : ''}</span>
                         </div>
                       );
                     })}
                   </div>
-                ) : <div className="card"><Empty action={<button type="button" className="btn soft" onClick={() => setMeasureOpen(true)}>Add measurements</button>}>Waist, arms, body fat… track what matters to you.</Empty></div>}
-                {m.previous && <div className="section-footer">Changes vs {shortDay(m.previous.date)}</div>}
+                ) : <div className="card"><Empty action={<button type="button" className="btn soft" onClick={() => setMeasureOpen(true)}>{t('Add measurements')}</button>}>{t('Waist, arms, body fat… track what matters to you.')}</Empty></div>}
+                {m.previous && <div className="section-footer">{t('Changes vs {date}', { date: shortDay(m.previous.date) })}</div>}
               </Section>
 
-              <Section title="Progress photos" action={b.photos.length > 1 ? <button type="button" onClick={() => setCompare('front')}>Compare</button> : null}>
+              <Section title={t('Progress photos')} action={b.photos.length > 1 ? <button type="button" onClick={() => setCompare('front')}>{t('Compare')}</button> : null}>
                 <div className="photo-grid">
                   {b.photos.slice(0, 8).map((p) => <PhotoTile key={p.id} photo={p} onOpen={setViewer} />)}
-                  <button type="button" className="photo-add" onClick={() => fileRef.current.click()}><Icon name="camera" size={22} />Add photo</button>
+                  <button type="button" className="photo-add" onClick={() => fileRef.current.click()}><Icon name="camera" size={22} />{t('Add photo')}</button>
                 </div>
-                <div className="section-footer">Stored privately in your Telegram chat with the bot.</div>
+                <div className="section-footer">{t('Stored privately in your Telegram chat with the bot.')}</div>
               </Section>
               <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { if (e.target.files[0]) pickFile(e.target.files[0]); e.target.value = ''; }} />
 
               <WeightSheet open={weightOpen} onClose={() => setWeightOpen(false)} latestKg={w.latest?.weightKg} onSaved={(weight) => q.setData((cur) => ({ ...cur, weight }))} />
               <MeasureSheet open={measureOpen} onClose={() => setMeasureOpen(false)} latest={m.latest} onSaved={(measurements) => q.setData((cur) => ({ ...cur, measurements }))} />
 
-              <Sheet open={!!upload} onClose={() => setUpload(null)} title="New progress photo">
-                {upload && <img src={upload.dataUrl} alt="Preview" style={{ width: '100%', maxHeight: '50vh', objectFit: 'contain', borderRadius: 12 }} />}
-                <Segmented label="Pose" value={upload?.pose} onChange={(pose) => setUpload({ ...upload, pose })} options={POSES} />
-                <button type="button" className="btn lg block" disabled={busy} onClick={sendPhoto}>{busy ? 'Uploading…' : 'Save photo'}</button>
+              <Sheet open={!!upload} onClose={() => setUpload(null)} title={t('New progress photo')}>
+                {upload && <img src={upload.dataUrl} alt={t('Preview')} style={{ width: '100%', maxHeight: '50vh', objectFit: 'contain', borderRadius: 12 }} />}
+                <Segmented label={t('Pose')} value={upload?.pose} onChange={(pose) => setUpload({ ...upload, pose })} options={poseOptions()} />
+                <button type="button" className="btn lg block" disabled={busy} onClick={sendPhoto}>{busy ? t('Uploading…') : t('Save photo')}</button>
               </Sheet>
 
-              <Sheet open={!!viewer} onClose={() => setViewer(null)} title={viewer ? `${viewer.pose[0].toUpperCase() + viewer.pose.slice(1)} · ${shortDay(viewer.localDate)}` : ''}>
+              <Sheet open={!!viewer} onClose={() => setViewer(null)} title={viewer ? `${poseName(viewer.pose)} · ${shortDay(viewer.localDate)}` : ''}>
                 {viewer && <PhotoImg photo={viewer} />}
-                {viewer && <button type="button" className="btn danger block" style={{ background: 'var(--field)' }} onClick={() => deletePhoto(viewer)}>Delete photo</button>}
+                {viewer && <button type="button" className="btn danger block" style={{ background: 'var(--field)' }} onClick={() => deletePhoto(viewer)}>{t('Delete photo')}</button>}
               </Sheet>
 
-              <Sheet open={!!compare} onClose={() => setCompare(null)} title="Compare">
-                <Segmented label="Pose" value={compare} onChange={setCompare} options={POSES} />
+              <Sheet open={!!compare} onClose={() => setCompare(null)} title={t('Compare')}>
+                <Segmented label={t('Pose')} value={compare} onChange={setCompare} options={poseOptions()} />
                 {(() => {
                   const list = b.photos.filter((p) => p.pose === compare);
-                  if (list.length < 2) return <Empty>Add at least two {compare} photos to compare.</Empty>;
+                  if (list.length < 2) return <Empty>{t('Add at least two photos of this pose to compare.')}</Empty>;
                   const [newest, oldest] = [list[0], list[list.length - 1]];
                   return (
                     <div className="grid2" style={{ gap: 8 }}>

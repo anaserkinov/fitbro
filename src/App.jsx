@@ -4,6 +4,7 @@ import { UserProvider, NavProvider, useNav, useUser } from './lib/app-state.jsx'
 import { Icon } from './ui/icons.jsx';
 import { Spinner, ErrorBox, ToastHost } from './ui/kit.jsx';
 import { haptic } from './lib/tg.js';
+import { t } from './lib/i18n.js';
 
 import Onboarding from './screens/Onboarding.jsx';
 import Home from './screens/Home.jsx';
@@ -38,14 +39,14 @@ const SCREENS = {
 function TabBar() {
   const nav = useNav();
   return (
-    <nav className="tabbar" aria-label="Main">
-      {TABS.map((t) => {
-        const active = nav.tab === t.id;
+    <nav className="tabbar" aria-label={t('Main')}>
+      {TABS.map((tab) => {
+        const active = nav.tab === tab.id;
         return (
-          <button key={t.id} type="button" aria-current={active ? 'page' : undefined}
-            onClick={() => { if (!active) haptic.select(); nav.setTab(t.id); }}>
-            <Icon name={t.icon} size={26} stroke={active ? 2.3 : 1.8} />
-            {t.label}
+          <button key={tab.id} type="button" aria-current={active ? 'page' : undefined}
+            onClick={() => { if (!active) haptic.select(); nav.setTab(tab.id); }}>
+            <Icon name={tab.icon} size={26} stroke={active ? 2.3 : 1.8} />
+            {t(tab.label)}
           </button>
         );
       })}
@@ -61,7 +62,7 @@ function Shell() {
       <div key={nav.top.key}>
         {nav.showDevBack && (
           <div style={{ padding: '8px 16px 0', maxWidth: 640, margin: '0 auto' }}>
-            <button type="button" className="devbar" onClick={nav.pop}><Icon name="chevronLeft" size={20} stroke={2.4} />Back</button>
+            <button type="button" className="devbar" onClick={nav.pop}><Icon name="chevronLeft" size={20} stroke={2.4} />{t('Go back')}</button>
           </div>
         )}
         <Screen {...nav.top.params} />

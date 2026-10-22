@@ -1,26 +1,45 @@
 import { api } from 'sdk';
 import { MINI_APP_URL } from '../config.js';
+import { LANGUAGES } from '../i18n/core.js';
+import { tr, translatorFor } from '../i18n/bot.js';
 
 // Chat building blocks. The chat is button-driven: a persistent 4-button keyboard,
 // inline buttons on messages, and plain numbers for weight — no command syntax.
 
-export const BTN = {
-  workout: '🏋️ Workout',
-  today: '📊 Today',
-  weight: '⚖️ Weight',
-  water: '💧 +250 ml',
-};
+export function buttons(t) {
+  return {
+    workout: `🏋️ ${t('Workout')}`,
+    today: `📊 ${t('Today')}`,
+    weight: `⚖️ ${t('Weight')}`,
+    water: `💧 +250 ${t('ml')}`,
+  };
+}
 
-export const mainKeyboard = {
-  keyboard: [[{ text: BTN.workout }, { text: BTN.today }], [{ text: BTN.weight }, { text: BTN.water }]],
-  resize_keyboard: true,
-  is_persistent: true,
-  input_field_placeholder: 'Tap a button or send your weight',
-};
+// Which keyboard button a text is — in any language, since a keyboard sent before a
+// language change stays on screen. null when it's not a button.
+export function buttonOf(text) {
+  for (const lang of LANGUAGES) {
+    const b = buttons(translatorFor(lang));
+    const hit = Object.keys(b).find((k) => b[k] === text);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+export function mainKeyboard(user) {
+  const t = tr(user);
+  const b = buttons(t);
+  return {
+    keyboard: [[{ text: b.workout }, { text: b.today }], [{ text: b.weight }, { text: b.water }]],
+    resize_keyboard: true,
+    is_persistent: true,
+    input_field_placeholder: t('Tap a button or send your weight'),
+  };
+}
 
 // Inline button that opens the Mini App (at an optional hash path), or null when
 // the URL isn't configured yet.
-export function appButton(text = '📱 Open FitPro', path = '') {
+export function appButton(text, path = '') {
   return MINI_APP_URL ? { text, web_app: { url: MINI_APP_URL + path } } : null;
 }
 
@@ -45,6 +64,7 @@ export async function edit(chatId, messageId, text, extra = {}) {
   }
 }
 
-export function needsSetup(chatId) {
-  return send(chatId, 'First, a one-minute setup so I can set your daily targets 👇', { reply_markup: inline([[appButton('📱 Set up FitPro')]]) });
+export function needsSetup(user, chatId) {
+  const t = tr(user);
+  return send(chatId, t('First, a one-minute setup so I can set your daily targets 👇'), { reply_markup: inline([[appButton(`📱 ${t('Set up FitPro')}`)]]) });
 }

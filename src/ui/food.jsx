@@ -7,8 +7,10 @@ import { toKcal } from '../../tgcloud/lib/units.js';
 import { Sheet, Segmented, NumberInput, toast, toastError } from './kit.jsx';
 import { Icon } from './icons.jsx';
 import { haptic, confirmDialog } from '../lib/tg.js';
+import { t, cname } from '../lib/i18n.js';
 
-export const MEAL_OPTIONS = ['breakfast', 'lunch', 'dinner', 'snack'].map((m) => ({ value: m, label: MEAL_LABEL[m] }));
+// A function, not a constant: labels follow the current language.
+export const mealOptions = () => ['breakfast', 'lunch', 'dinner', 'snack'].map((m) => ({ value: m, label: t(MEAL_LABEL[m]) }));
 
 // Breakfast before 11, lunch until 16, dinner until 21, otherwise snack.
 export function mealForNow() {
@@ -20,9 +22,9 @@ export function foodSubtitle(food, fmt) {
   const parts = [];
   if (food.brand) parts.push(food.brand);
   if (food.servingGrams && food.servingLabel) {
-    parts.push(`${food.servingLabel} · ${fmt.e(food.kcalPer100 * food.servingGrams / 100)}`);
+    parts.push(`${t(food.servingLabel)} · ${fmt.e(food.kcalPer100 * food.servingGrams / 100)}`);
   } else {
-    parts.push(`100 ${food.baseUnit} · ${fmt.e(food.kcalPer100)}`);
+    parts.push(`100 ${t(food.baseUnit)} · ${fmt.e(food.kcalPer100)}`);
   }
   return parts.join(' · ');
 }
@@ -32,7 +34,7 @@ function MacroLine({ n, fmt }) {
     <div className="grid3" style={{ gap: 8 }}>
       {[['Protein', n.proteinG, 'var(--protein)'], ['Carbs', n.carbsG, 'var(--carbs)'], ['Fat', n.fatG, 'var(--fat)']].map(([label, v, c]) => (
         <div key={label} style={{ padding: 10, borderRadius: 10, background: `color-mix(in srgb, ${c} 12%, transparent)` }}>
-          <div className="tiny hint">{label}</div>
+          <div className="tiny hint">{t(label)}</div>
           <div className="bold">{fmt.g(v)}</div>
         </div>
       ))}
@@ -74,7 +76,7 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
   const base = food || loaded || null;
   const grams = base ? (unit === 'serving' ? (qty || 0) * (base.servingGrams || 0) : qty || 0) : 0;
   const n = base ? nutrientsFor(base, grams) : isQuick ? quick : log ? log : null;
-  const units = base ? [{ value: base.baseUnit, label: base.baseUnit }, ...(base.servingGrams ? [{ value: 'serving', label: base.servingLabel || 'serving' }] : [])] : [];
+  const units = base ? [{ value: base.baseUnit, label: t(base.baseUnit) }, ...(base.servingGrams ? [{ value: 'serving', label: base.servingLabel ? t(base.servingLabel) : t('serving') }] : [])] : [];
 
   async function save() {
     setBusy(true);
@@ -84,14 +86,14 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
       else if (isQuick) r = await mutate('updateFoodLog', { id: log.id, meal, ...quick }, AFFECTS.food);
       else r = await mutate('updateFoodLog', { id: log.id, meal, quantity: qty, unit }, AFFECTS.food);
       haptic.success();
-      toast(editing ? 'Saved' : `Added to ${MEAL_LABEL[meal].toLowerCase()}`);
+      toast(editing ? t('Saved') : t('Added to {meal}', { meal: t(MEAL_LABEL[meal]).toLowerCase() }));
       onSaved && onSaved(r.day);
       onClose();
     } catch (e) { toastError(e); } finally { setBusy(false); }
   }
 
   async function remove() {
-    if (!(await confirmDialog(`Remove ${log.name}?`))) return;
+    if (!(await confirmDialog(t('Remove {name}?', { name: cname(log.name) })))) return;
     try {
       const r = await mutate('deleteFoodLog', { id: log.id }, AFFECTS.food);
       onSaved && onSaved(r.day);
@@ -100,37 +102,37 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
   }
 
   if (!open) return null;
-  const title = base ? base.name : log ? log.name : '';
+  const title = cname(base ? base.name : log ? log.name : '');
   return (
     <Sheet open={open} onClose={onClose} title={title}>
       {base && <p className="small hint" style={{ marginTop: -10 }}>{foodSubtitle(base, fmt)}</p>}
       {isQuick ? (
         <div className="grid2">
-          <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">Name</span>
+          <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">{t('Name')}</span>
             <input className="input" value={quick.name || ''} onChange={(e) => setQuick({ ...quick, name: e.target.value })} /></label>
-          <label className="form-row"><span className="label">Energy, {fmt.energyUnit}</span>
-            <NumberInput value={fmt.eNum(quick.kcal)} decimals={0} onCommit={(v) => setQuick({ ...quick, kcal: v === null ? 0 : toKcal(v, fmt.energyUnit === 'kJ' ? 'kj' : 'kcal') })} label="Energy" /></label>
-          <label className="form-row"><span className="label">Protein, g</span><NumberInput value={quick.proteinG} onCommit={(v) => setQuick({ ...quick, proteinG: v ?? 0 })} label="Protein" /></label>
-          <label className="form-row"><span className="label">Carbs, g</span><NumberInput value={quick.carbsG} onCommit={(v) => setQuick({ ...quick, carbsG: v ?? 0 })} label="Carbs" /></label>
-          <label className="form-row"><span className="label">Fat, g</span><NumberInput value={quick.fatG} onCommit={(v) => setQuick({ ...quick, fatG: v ?? 0 })} label="Fat" /></label>
+          <label className="form-row"><span className="label">{t('Energy, {unit}', { unit: fmt.energyUnit })}</span>
+            <NumberInput value={fmt.eNum(quick.kcal)} decimals={0} onCommit={(v) => setQuick({ ...quick, kcal: v === null ? 0 : toKcal(v, fmt.energyUnit === 'kJ' ? 'kj' : 'kcal') })} label={t('Energy')} /></label>
+          <label className="form-row"><span className="label">{t('Protein, g')}</span><NumberInput value={quick.proteinG} onCommit={(v) => setQuick({ ...quick, proteinG: v ?? 0 })} label={t('Protein')} /></label>
+          <label className="form-row"><span className="label">{t('Carbs, g')}</span><NumberInput value={quick.carbsG} onCommit={(v) => setQuick({ ...quick, carbsG: v ?? 0 })} label={t('Carbs')} /></label>
+          <label className="form-row"><span className="label">{t('Fat, g')}</span><NumberInput value={quick.fatG} onCommit={(v) => setQuick({ ...quick, fatG: v ?? 0 })} label={t('Fat')} /></label>
         </div>
       ) : base ? (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 8, alignItems: 'end' }}>
-            <label className="form-row"><span className="label">Amount</span>
-              <NumberInput value={qty} decimals={unit === 'serving' ? 2 : 0} onCommit={(v) => setQty(v ?? 0)} label="Amount" autoFocus={!editing} /></label>
-            {units.length > 1 ? <Segmented label="Unit" value={unit} onChange={setUnit} options={units} /> : <span className="hint" style={{ paddingBottom: 12 }}>{unit}</span>}
+            <label className="form-row"><span className="label">{t('Amount')}</span>
+              <NumberInput value={qty} decimals={unit === 'serving' ? 2 : 0} onCommit={(v) => setQty(v ?? 0)} label={t('Amount')} autoFocus={!editing} /></label>
+            {units.length > 1 ? <Segmented label={t('Unit')} value={unit} onChange={setUnit} options={units} /> : <span className="hint" style={{ paddingBottom: 12 }}>{t(unit)}</span>}
           </div>
-          <div className="row-between"><span className="hint">Energy</span><span className="mid-num">{fmt.e(n.kcal)}</span></div>
+          <div className="row-between"><span className="hint">{t('Energy')}</span><span className="mid-num">{fmt.e(n.kcal)}</span></div>
           <MacroLine n={n} fmt={fmt} />
         </>
-      ) : loaded === null && log?.foodId ? <p className="hint">Loading…</p> : <p className="hint">This food was removed. You can still delete the entry.</p>}
+      ) : loaded === null && log?.foodId ? <p className="hint">{t('Loading…')}</p> : <p className="hint">{t('This food was removed. You can still delete the entry.')}</p>}
 
-      <Segmented label="Meal" value={meal} onChange={setMeal} options={MEAL_OPTIONS} />
+      <Segmented label={t('Meal')} value={meal} onChange={setMeal} options={mealOptions()} />
       <div className="stack-sm" style={{ gap: 8 }}>
-        {(base || isQuick) && <button type="button" className="btn lg block" disabled={busy || (base && !(qty > 0))} onClick={save}>{editing ? 'Save' : 'Add'}</button>}
-        {editing && <button type="button" className="btn danger block" style={{ background: 'var(--field)' }} onClick={remove}>Remove entry</button>}
-        {base && base.custom && onEditFood && <button type="button" className="btn ghost" onClick={() => onEditFood(base)}>Edit this food</button>}
+        {(base || isQuick) && <button type="button" className="btn lg block" disabled={busy || (base && !(qty > 0))} onClick={save}>{editing ? t('Save') : t('Add')}</button>}
+        {editing && <button type="button" className="btn danger block" style={{ background: 'var(--field)' }} onClick={remove}>{t('Remove entry')}</button>}
+        {base && base.custom && onEditFood && <button type="button" className="btn ghost" onClick={() => onEditFood(base)}>{t('Edit this food')}</button>}
       </div>
     </Sheet>
   );
@@ -153,18 +155,18 @@ export function QuickAddSheet({ open, onClose, date, meal: initialMeal, onSaved 
     } catch (e) { toastError(e); } finally { setBusy(false); }
   }
   return (
-    <Sheet open={open} onClose={onClose} title="Quick add">
+    <Sheet open={open} onClose={onClose} title={t('Quick add')}>
       <div className="grid2">
-        <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">Name (optional)</span>
-          <input className="input" placeholder="e.g. Protein bar" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} /></label>
-        <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">Energy, {fmt.energyUnit}</span>
-          <NumberInput value={v.kcal} decimals={0} placeholder="0" autoFocus onCommit={(x) => setV({ ...v, kcal: x })} label="Energy" /></label>
-        <label className="form-row"><span className="label">Protein, g</span><NumberInput value={v.proteinG} placeholder="—" onCommit={(x) => setV({ ...v, proteinG: x })} label="Protein" /></label>
-        <label className="form-row"><span className="label">Carbs, g</span><NumberInput value={v.carbsG} placeholder="—" onCommit={(x) => setV({ ...v, carbsG: x })} label="Carbs" /></label>
-        <label className="form-row"><span className="label">Fat, g</span><NumberInput value={v.fatG} placeholder="—" onCommit={(x) => setV({ ...v, fatG: x })} label="Fat" /></label>
+        <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">{t('Name (optional)')}</span>
+          <input className="input" placeholder={t('e.g. Protein bar')} value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} /></label>
+        <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">{t('Energy, {unit}', { unit: fmt.energyUnit })}</span>
+          <NumberInput value={v.kcal} decimals={0} placeholder="0" autoFocus onCommit={(x) => setV({ ...v, kcal: x })} label={t('Energy')} /></label>
+        <label className="form-row"><span className="label">{t('Protein, g')}</span><NumberInput value={v.proteinG} placeholder="—" onCommit={(x) => setV({ ...v, proteinG: x })} label={t('Protein')} /></label>
+        <label className="form-row"><span className="label">{t('Carbs, g')}</span><NumberInput value={v.carbsG} placeholder="—" onCommit={(x) => setV({ ...v, carbsG: x })} label={t('Carbs')} /></label>
+        <label className="form-row"><span className="label">{t('Fat, g')}</span><NumberInput value={v.fatG} placeholder="—" onCommit={(x) => setV({ ...v, fatG: x })} label={t('Fat')} /></label>
       </div>
-      <Segmented label="Meal" value={meal} onChange={setMeal} options={MEAL_OPTIONS} />
-      <button type="button" className="btn lg block" disabled={busy || !(v.kcal >= 0 && v.kcal !== null)} onClick={save}>Add</button>
+      <Segmented label={t('Meal')} value={meal} onChange={setMeal} options={mealOptions()} />
+      <button type="button" className="btn lg block" disabled={busy || !(v.kcal >= 0 && v.kcal !== null)} onClick={save}>{t('Add')}</button>
     </Sheet>
   );
 }
@@ -179,7 +181,7 @@ export function BarcodeSheet({ open, onClose, onFound, onMissing }) {
 
   async function lookup(raw) {
     const c = (raw ?? code).replace(/\s+/g, '');
-    if (!/^\d{8,14}$/.test(c)) { toast('A barcode is 8–14 digits'); return; }
+    if (!/^\d{8,14}$/.test(c)) { toast(t('A barcode is 8–14 digits')); return; }
     setBusy(true);
     try {
       const r = await call('lookupBarcode', { barcode: c });
@@ -191,28 +193,28 @@ export function BarcodeSheet({ open, onClose, onFound, onMissing }) {
     try {
       const bmp = await createImageBitmap(file);
       const found = await new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] }).detect(bmp);
-      if (!found.length) { toast('No barcode found — type the digits instead'); return; }
+      if (!found.length) { toast(t('No barcode found — type the digits instead')); return; }
       setCode(found[0].rawValue);
       lookup(found[0].rawValue);
-    } catch { toast('Could not read the photo — type the digits instead'); }
+    } catch { toast(t('Could not read the photo — type the digits instead')); }
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title="Barcode">
+    <Sheet open={open} onClose={onClose} title={t('Barcode')}>
       <label className="field">
         <Icon name="barcode" size={18} color="var(--hint)" />
-        <span className="sr-only">Barcode digits</span>
-        <input inputMode="numeric" placeholder="e.g. 4006381333931" value={code} autoFocus onChange={(e) => setCode(e.target.value)}
+        <span className="sr-only">{t('Barcode digits')}</span>
+        <input inputMode="numeric" placeholder={t('e.g. {code}', { code: '4006381333931' })} value={code} autoFocus onChange={(e) => setCode(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') lookup(); }} />
       </label>
       {canDetect && (
         <>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files[0] && fromPhoto(e.target.files[0])} />
-          <button type="button" className="btn soft block" onClick={() => fileRef.current.click()}><Icon name="camera" size={18} />Take a photo of the barcode</button>
+          <button type="button" className="btn soft block" onClick={() => fileRef.current.click()}><Icon name="camera" size={18} />{t('Take a photo of the barcode')}</button>
         </>
       )}
-      <button type="button" className="btn lg block" disabled={busy} onClick={() => lookup()}>{busy ? 'Looking up…' : 'Look up'}</button>
-      <p className="small hint">Product data from Open Food Facts.</p>
+      <button type="button" className="btn lg block" disabled={busy} onClick={() => lookup()}>{busy ? t('Looking up…') : t('Look up')}</button>
+      <p className="small hint">{t('Product data from Open Food Facts.')}</p>
     </Sheet>
   );
 }

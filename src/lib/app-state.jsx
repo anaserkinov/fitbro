@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { setBackButton, inTelegram } from './tg.js';
 import { makeFmt } from './format.js';
+import { setLanguage } from './i18n.js';
 import { localDate } from '../../tgcloud/lib/dates.js';
 
 // ── Signed-in user ───────────────────────────────────────────────────────────
@@ -8,6 +9,7 @@ import { localDate } from '../../tgcloud/lib/dates.js';
 const UserCtx = createContext(null);
 
 export function UserProvider({ user, setUser, children }) {
+  setLanguage(user?.language);   // before anything below renders text
   const value = useMemo(() => ({ user, setUser, fmt: makeFmt(user), today: localDate(user?.timezone || 'UTC') }), [user]);
   return <UserCtx.Provider value={value}>{children}</UserCtx.Provider>;
 }

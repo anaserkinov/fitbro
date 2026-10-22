@@ -6,6 +6,7 @@ import { Section, Spinner, Empty, ErrorBox, toastError } from '../ui/kit.jsx';
 import { FoodLogSheet, QuickAddSheet, BarcodeSheet, foodSubtitle } from '../ui/food.jsx';
 import { Icon } from '../ui/icons.jsx';
 import { haptic } from '../lib/tg.js';
+import { t, cname } from '../lib/i18n.js';
 
 function useDebounced(value, ms) {
   const [v, setV] = useState(value);
@@ -36,10 +37,10 @@ export default function FoodSearch({ date, meal, scan = false }) {
     return (
       <div className="row" style={{ minHeight: 56, paddingRight: 8 }}>
         <button type="button" className="grow" style={{ background: 'none', border: 0, padding: 0, textAlign: 'left' }} onClick={() => { haptic.tap(); setPicked(f); }}>
-          <span className="row-title ellipsis">{f.name}{f.source === 'recipe' && <span className="badge gray" style={{ marginLeft: 6 }}>Recipe</span>}{f.custom && f.source !== 'recipe' && <span className="badge gray" style={{ marginLeft: 6 }}>Mine</span>}</span>
+          <span className="row-title ellipsis">{cname(f.name)}{f.source === 'recipe' && <span className="badge gray" style={{ marginLeft: 6 }}>{t('Recipe')}</span>}{f.custom && f.source !== 'recipe' && <span className="badge gray" style={{ marginLeft: 6 }}>{t('Mine')}</span>}</span>
           <span className="sub ellipsis">{foodSubtitle(f, fmt)}</span>
         </button>
-        <button type="button" className="icon-btn" style={{ background: 'transparent' }} aria-label={fav ? `Remove ${f.name} from favourites` : `Add ${f.name} to favourites`} aria-pressed={fav} onClick={() => toggleFav(f)}>
+        <button type="button" className="icon-btn" style={{ background: 'transparent' }} aria-label={fav ? t('Remove {name} from favourites', { name: cname(f.name) }) : t('Add {name} to favourites', { name: cname(f.name) })} aria-pressed={fav} onClick={() => toggleFav(f)}>
           <Icon name="star" size={20} color={fav ? '#E8A400' : 'var(--hint)'} fill={fav ? '#E8A400' : 'none'} stroke={1.8} />
         </button>
       </div>
@@ -50,37 +51,37 @@ export default function FoodSearch({ date, meal, scan = false }) {
   return (
     <div className="screen sub">
       <div className="stack-sm" style={{ gap: 2, padding: '0 4px' }}>
-        <span className="eyebrow">Add to {MEAL_LABEL[meal].toLowerCase()}</span>
-        <h1 className="title">Search food</h1>
+        <span className="eyebrow">{t('Add to {meal}@eyebrow', { meal: t(MEAL_LABEL[meal]).toLowerCase() })}</span>
+        <h1 className="title">{t('Search food')}</h1>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <label className="field" style={{ flex: 1 }}>
           <Icon name="search" size={18} color="var(--hint)" />
-          <span className="sr-only">Search food</span>
-          <input type="search" placeholder="Chicken, oats, banana…" value={text} autoFocus={!scan} onChange={(e) => setText(e.target.value)} />
+          <span className="sr-only">{t('Search food')}</span>
+          <input type="search" placeholder={t('Chicken, oats, banana…')} value={text} autoFocus={!scan} onChange={(e) => setText(e.target.value)} />
         </label>
-        <button type="button" className="icon-btn" style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent)', color: 'var(--accent-text)' }} aria-label="Scan barcode" onClick={() => setBarcode(true)}>
+        <button type="button" className="icon-btn" style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent)', color: 'var(--accent-text)' }} aria-label={t('Scan barcode')} onClick={() => setBarcode(true)}>
           <Icon name="barcode" size={20} />
         </button>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" className="btn plain sm" onClick={() => setQuick(true)}>Quick add</button>
-        <button type="button" className="btn plain sm" onClick={() => nav.push('FoodEditor', {})}>New food</button>
-        <button type="button" className="btn plain sm" onClick={() => nav.push('RecipeEditor', {})}>New recipe</button>
+        <button type="button" className="btn plain sm" onClick={() => setQuick(true)}>{t('Quick add')}</button>
+        <button type="button" className="btn plain sm" onClick={() => nav.push('FoodEditor', {})}>{t('New food')}</button>
+        <button type="button" className="btn plain sm" onClick={() => nav.push('RecipeEditor', {})}>{t('New recipe')}</button>
       </div>
 
       {q.error ? <ErrorBox error={q.error} onRetry={q.reload} /> : !results ? <Spinner /> : term ? (
         results.results?.length ? (
           <div className="list">{results.results.map((f) => <FoodRow key={f.id} f={f} />)}</div>
         ) : (
-          <Empty action={<button type="button" className="btn soft" onClick={() => nav.push('FoodEditor', { name: term })}>Create “{term}”</button>}>No foods match “{term}”.</Empty>
+          <Empty action={<button type="button" className="btn soft" onClick={() => nav.push('FoodEditor', { name: term })}>{t('Create “{term}”', { term })}</button>}>{t('No foods match “{term}”.', { term })}</Empty>
         )
       ) : (
         <>
-          {results.favorites?.length > 0 && <Section title="Favourites"><div className="list">{results.favorites.map((f) => <FoodRow key={f.id} f={f} />)}</div></Section>}
+          {results.favorites?.length > 0 && <Section title={t('Favourites')}><div className="list">{results.favorites.map((f) => <FoodRow key={f.id} f={f} />)}</div></Section>}
           {results.recent?.length > 0 ? (
-            <Section title="Recent"><div className="list">{results.recent.map((f) => <FoodRow key={f.id} f={f} />)}</div></Section>
-          ) : !results.favorites?.length && <Empty>Search the food database, scan a barcode, or quick-add calories.</Empty>}
+            <Section title={t('Recent')}><div className="list">{results.recent.map((f) => <FoodRow key={f.id} f={f} />)}</div></Section>
+          ) : !results.favorites?.length && <Empty>{t('Search the food database, scan a barcode, or quick-add calories.')}</Empty>}
         </>
       )}
 

@@ -1,4 +1,7 @@
 import { round } from './units.js';
+import { translator } from './i18n/core.js';
+
+const EN = translator('en', {});
 
 // Pure training maths. Sets here are rows of the `sets` table (camelCase keys).
 
@@ -57,16 +60,17 @@ export function prCandidates(set, trackType) {
   return out;
 }
 
-// Human label for a PR, e.g. 'Heaviest set: 85 kg × 3'. `fmt` formats kg for the user.
-export function describePr(pr, fmt) {
+// Human label for a PR, e.g. 'Heaviest set: 85 kg × 3'. `fmt` formats kg for the user;
+// `t` translates (the strings live in lib/i18n/shared.js).
+export function describePr(pr, fmt, t = EN) {
   switch (pr.type) {
-    case 'max_weight':     return `Heaviest set: ${fmt(pr.value)} × ${pr.reps}`;
-    case 'e1rm':           return `Estimated 1RM: ${fmt(pr.value)}`;
-    case 'reps_at_weight': return `Most reps at ${fmt(pr.weightKg)}: ${pr.value}`;
-    case 'max_reps':       return `Most reps: ${pr.value}`;
-    case 'session_volume': return `Best session volume: ${fmt(pr.value)}`;
-    case 'max_duration':   return `Longest: ${Math.floor(pr.value / 60)}:${String(pr.value % 60).padStart(2, '0')}`;
-    case 'max_distance':   return `Longest distance: ${round(pr.value / 1000, 2)} km`;
+    case 'max_weight':     return t('Heaviest set: {w} × {reps}', { w: fmt(pr.value), reps: pr.reps });
+    case 'e1rm':           return t('Estimated 1RM: {w}', { w: fmt(pr.value) });
+    case 'reps_at_weight': return t('Most reps at {w}: {n}', { w: fmt(pr.weightKg), n: pr.value });
+    case 'max_reps':       return t('Most reps: {n}', { n: pr.value });
+    case 'session_volume': return t('Best session volume: {w}', { w: fmt(pr.value) });
+    case 'max_duration':   return t('Longest: {time}', { time: `${Math.floor(pr.value / 60)}:${String(pr.value % 60).padStart(2, '0')}` });
+    case 'max_distance':   return t('Longest distance: {km} km', { km: round(pr.value / 1000, 2) });
     default:               return pr.type;
   }
 }

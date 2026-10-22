@@ -1,3 +1,5 @@
+import { t } from '../lib/i18n.js';
+
 // Small SVG charts drawn on a fixed viewBox and stretched to the container width.
 
 export function Ring({ size = 116, pct, color = 'var(--accent)', stroke = 10, label, children }) {
@@ -33,7 +35,7 @@ function scale(values, height, pad) {
 export function LineChart({ series, height = 120, color = 'var(--accent)', area = true, goal = null, line = null, dots = false, label }) {
   const pts = series.filter((p) => p.y !== null && p.y !== undefined);
   if (pts.length < 2) {
-    return <div className="empty small" style={{ height }}>Log a few more sessions to see a trend</div>;
+    return <div className="empty small" style={{ height }}>{t('Log a few more sessions to see a trend')}</div>;
   }
   const ys = [...pts.map((p) => p.y), ...(line ? line.filter((v) => v !== null) : []), ...(goal !== null ? [goal] : [])];
   const y = scale(ys, height, 8);

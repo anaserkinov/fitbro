@@ -11,7 +11,7 @@ export const ENUMS = {
   trainingSplit: ['ppl', 'upper_lower', 'full_body', 'custom'],
   weightUnit:    ['kg', 'lb'],
   energyUnit:    ['kcal', 'kj'],
-  language:      ['en'],
+  language:      ['en', 'ru', 'uz'],
   muscle:        ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'cardio', 'full_body'],
   equipment:     ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'kettlebell', 'band', 'other'],
   category:      ['compound', 'isolation'],

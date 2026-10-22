@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon, IconSquare } from './icons.jsx';
 import { tg, mainButtonSupported, haptic } from '../lib/tg.js';
+import { t } from '../lib/i18n.js';
 
 // ── Grouped lists ────────────────────────────────────────────────────────────
 
@@ -104,9 +105,9 @@ export function Stepper({ value, step, decimals = 1, unit, onChange, label }) {
   const r = (v) => Math.round(v * 10 ** decimals) / 10 ** decimals;
   return (
     <div className="stepper">
-      <button type="button" aria-label={`Decrease ${label}`} onClick={() => { haptic.select(); onChange(r(value - step)); }}>−</button>
+      <button type="button" aria-label={t('Decrease {label}', { label })} onClick={() => { haptic.select(); onChange(r(value - step)); }}>−</button>
       <div className="val">{value.toFixed(decimals)}<span className="unit"> {unit}</span></div>
-      <button type="button" aria-label={`Increase ${label}`} onClick={() => { haptic.select(); onChange(r(value + step)); }}>+</button>
+      <button type="button" aria-label={t('Increase {label}', { label })} onClick={() => { haptic.select(); onChange(r(value + step)); }}>+</button>
     </div>
   );
 }
@@ -118,7 +119,7 @@ export function Bar({ pct, color, thick }) {
 // ── States ───────────────────────────────────────────────────────────────────
 
 export function Spinner() {
-  return <div className="spinner" role="status" aria-label="Loading" />;
+  return <div className="spinner" role="status" aria-label={t('Loading')} />;
 }
 
 export function Empty({ children, action }) {
@@ -128,8 +129,8 @@ export function Empty({ children, action }) {
 export function ErrorBox({ error, onRetry }) {
   return (
     <div className="error-box row-between">
-      <span>{error?.message || 'Something went wrong'}</span>
-      {onRetry && <button type="button" className="btn ghost" onClick={onRetry}>Retry</button>}
+      <span>{t(error?.message || 'Something went wrong')}</span>
+      {onRetry && <button type="button" className="btn ghost" onClick={onRetry}>{t('Retry')}</button>}
     </div>
   );
 }
@@ -149,7 +150,7 @@ export function toast(text, kind = '') {
 }
 export function toastError(e) {
   haptic.error();
-  toast(e?.message || 'Something went wrong');
+  toast(t(e?.message || 'Something went wrong'));
 }
 
 export function ToastHost() {
@@ -189,7 +190,7 @@ export function Sheet({ open, onClose, title, children, right, gray }) {
         {(title || right) && (
           <div className="sheet-head">
             <h2>{title}</h2>
-            {right ?? <button type="button" className="btn ghost" onClick={onClose}>Close</button>}
+            {right ?? <button type="button" className="btn ghost" onClick={onClose}>{t('Close')}</button>}
           </div>
         )}
         {children}
@@ -232,7 +233,7 @@ export function MainButton({ text, onClick, disabled = false, busy = false }) {
   if (mainButtonSupported) return null;
   return (
     <div className="mainbtn-wrap">
-      <button type="button" className="btn lg" disabled={disabled || busy} onClick={onClick}>{busy ? 'Saving…' : text}</button>
+      <button type="button" className="btn lg" disabled={disabled || busy} onClick={onClick}>{busy ? t('Saving…') : text}</button>
     </div>
   );
 }

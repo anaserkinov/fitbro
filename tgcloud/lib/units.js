@@ -25,30 +25,41 @@ export function fromKcal(kcal, unit) {
   return unit === 'kj' ? kcal * KJ_PER_KCAL : kcal;
 }
 
-// 12345.6 → '12,346'. Hand-rolled so it doesn't depend on locale data.
-export function thousands(n, digits = 0) {
+// Unit symbols per language (English uses the internal names, kJ aside).
+const UNIT_LABEL = {
+  en: { kj: 'kJ' },
+  ru: { kg: 'кг', lb: 'фнт', kcal: 'ккал', kj: 'кДж', g: 'г', ml: 'мл', l: 'л', km: 'км' },
+  uz: { kcal: 'kkal', kj: 'kJ' },
+};
+export const unitLabel = (unit, lang = 'en') => (UNIT_LABEL[lang] || UNIT_LABEL.en)[unit] || UNIT_LABEL.en[unit] || unit;
+
+// 12345.6 → '12,346' (en) or '12 346' (ru/uz, which also use a decimal comma).
+// Hand-rolled so it doesn't depend on locale data.
+export function thousands(n, digits = 0, lang = 'en') {
   const fixed = Math.abs(n).toFixed(digits);
   const [int, frac] = fixed.split('.');
-  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return (n < 0 ? '−' : '') + grouped + (frac ? '.' + frac : '');
+  const en = lang === 'en';
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, en ? ',' : '\u202F');
+  return (n < 0 ? '−' : '') + grouped + (frac ? (en ? '.' : ',') + frac : '');
 }
 
 // Drops a trailing '.0' so 80 kg reads '80', 82.4 stays '82.4'.
-function trim(n, digits) {
-  const s = thousands(n, digits);
-  return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
+function trim(n, digits, lang) {
+  const s = thousands(n, digits, lang);
+  const dot = lang === 'en' ? '.' : ',';
+  return s.includes(dot) ? s.replace(dot === '.' ? /\.?0+$/ : /,?0+$/, '') : s;
 }
 
-export function formatWeight(kg, unit = 'kg', { digits = 1, suffix = true } = {}) {
+export function formatWeight(kg, unit = 'kg', { digits = 1, suffix = true, lang = 'en' } = {}) {
   if (kg === null || kg === undefined) return '—';
-  const s = trim(fromKg(kg, unit), digits);
-  return suffix ? `${s} ${unit}` : s;
+  const s = trim(fromKg(kg, unit), digits, lang);
+  return suffix ? `${s} ${unitLabel(unit, lang)}` : s;
 }
 
-export function formatEnergy(kcal, unit = 'kcal', { suffix = true } = {}) {
+export function formatEnergy(kcal, unit = 'kcal', { suffix = true, lang = 'en' } = {}) {
   if (kcal === null || kcal === undefined) return '—';
-  const s = thousands(fromKcal(kcal, unit), 0);
-  return suffix ? `${s} ${unit === 'kj' ? 'kJ' : 'kcal'}` : s;
+  const s = thousands(fromKcal(kcal, unit), 0, lang);
+  return suffix ? `${s} ${unitLabel(unit, lang)}` : s;
 }
 
 export function formatDuration(sec) {

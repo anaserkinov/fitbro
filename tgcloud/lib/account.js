@@ -8,6 +8,7 @@ import { logWeight } from './body.js';
 import { ensureDefaultReminders, listReminders, updateReminder as saveReminder, rescheduleAll } from './reminders.js';
 import { seedCatalog } from './catalog.js';
 import { getActiveWorkout } from './workouts.js';
+import { languageChanged } from './bot/chat.js';
 
 // Profile, onboarding and settings — the Mini App's account screens.
 
@@ -40,6 +41,8 @@ export async function getSettings(user) {
 export async function updateSettings(user, input) {
   const u = await updateUser(user.id, input);
   if (u.timezone !== user.timezone) await rescheduleAll(u);
+  // The chat keyboard is in the old language until we send a new one.
+  if (u.language !== user.language && u.onboardedAt) await languageChanged(u);
   return getSettings(u);
 }
 

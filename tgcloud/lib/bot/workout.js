@@ -5,7 +5,9 @@ import { getWorkout, getActiveWorkout, startWorkout, updateSet, deleteSet, finis
 import { listRoutines } from '../routines.js';
 import { setBotState } from '../users.js';
 import { describePr } from '../strength.js';
-import { formatWeight, formatDuration, fromKg, toKg, round } from '../units.js';
+import { formatWeight, formatDuration, fromKg, toKg, round, thousands, unitLabel } from '../units.js';
+import { tr } from '../i18n/bot.js';
+import { catalogName } from '../i18n/catalog.js';
 import { send, edit, inline, appButton, esc } from './ui.js';
 
 // The chat workout card: one message showing the next set, edited in place as you
@@ -15,41 +17,48 @@ import { send, edit, inline, appButton, esc } from './ui.js';
 
 const WEIGHTED = ['weight_reps', 'weighted_bodyweight'];
 
-function setText(set, track, unit) {
+const num = (n, user) => thousands(n, 2, user.language).replace(/[.,]?0+$/, '');
+const kgText = (kg, user, opts) => formatWeight(kg, user.weightUnit, { lang: user.language, ...opts });
+
+function setText(set, track, user) {
+  const t = tr(user);
   if (track === 'duration') return formatDuration(set.durationSec || 0);
-  if (track === 'distance_duration') return `${round((set.distanceM || 0) / 1000, 2)} km · ${formatDuration(set.durationSec || 0)}`;
-  if (WEIGHTED.includes(track) && set.weightKg) return `${formatWeight(set.weightKg, unit)} × ${set.reps ?? '?'}`;
-  return `${set.reps ?? '?'} reps`;
+  if (track === 'distance_duration') return `${num((set.distanceM || 0) / 1000, user)} ${t('km')} · ${formatDuration(set.durationSec || 0)}`;
+  if (WEIGHTED.includes(track) && set.weightKg) return `${kgText(set.weightKg, user)} × ${set.reps ?? '?'}`;
+  return set.reps == null ? `? ${t('reps')}` : t.n(set.reps, '{n} rep', '{n} reps');
 }
 
-function adjustButtons(set, track, unit) {
+function adjustButtons(set, track, user) {
+  const t = tr(user);
   const a = (label, field, delta) => ({ text: label, callback_data: `w:a:${set.id}:${field}:${delta}` });
+  const rep = [a(`−1 ${t('rep@short')}`, 'r', -1), a(`+1 ${t('rep@short')}`, 'r', 1)];
   if (WEIGHTED.includes(track)) {
-    const step = unit === 'lb' ? 5 : 2.5;
-    return [a(`−${step} ${unit}`, 'w', -step), a(`+${step} ${unit}`, 'w', step), a('−1 rep', 'r', -1), a('+1 rep', 'r', 1)];
+    const step = user.weightUnit === 'lb' ? 5 : 2.5;
+    const u = unitLabel(user.weightUnit, user.language);
+    return [a(`−${num(step, user)} ${u}`, 'w', -step), a(`+${num(step, user)} ${u}`, 'w', step), ...rep];
   }
-  if (track === 'duration') return [a('−15 s', 't', -15), a('+15 s', 't', 15)];
-  if (track === 'distance_duration') return [a('−0.5 km', 'm', -500), a('+0.5 km', 'm', 500), a('−1 min', 't', -60), a('+1 min', 't', 60)];
-  return [a('−1 rep', 'r', -1), a('+1 rep', 'r', 1)];
+  if (track === 'duration') return [a(`−15 ${t('sec')}`, 't', -15), a(`+15 ${t('sec')}`, 't', 15)];
+  if (track === 'distance_duration') return [a(`−${num(0.5, user)} ${t('km')}`, 'm', -500), a(`+${num(0.5, user)} ${t('km')}`, 'm', 500), a(`−1 ${t('min')}`, 't', -60), a(`+1 ${t('min')}`, 't', 60)];
+  return rep;
 }
 
 // Text + buttons for the open workout's next set (focus = exercise picked via "Next").
 export async function renderCard(user, workoutId, note = '') {
+  const t = tr(user);
   const d = await getWorkout(user, { id: workoutId });
   const w = d.workout;
   if (!w || w.endedAt) return null;
-  const unit = user.weightUnit;
   const open = (e) => e.sets.some((s) => !s.completed);
   const focusId = user.botState && user.botState.focusWe;
   const ex = d.exercises.find((e) => e.id === focusId && open(e)) || d.exercises.find(open);
   const all = d.exercises.flatMap((e) => e.sets.filter((s) => s.setType !== 'warmup'));
   const minutes = Math.max(0, Math.round((Date.now() - w.startedAt.getTime()) / 60000));
-  const lines = [`🏋️ <b>${esc(w.name)}</b> · ${minutes} min · ${all.filter((s) => s.completed).length}/${all.length} sets`];
+  const lines = [`🏋️ <b>${esc(w.name)}</b> · ${minutes} ${t('min')} · ${t('{done}/{total} sets', { done: all.filter((s) => s.completed).length, total: all.length })}`];
 
   if (!ex) {
-    lines.push('', d.exercises.length ? 'All planned sets done 💪' : 'No exercises yet — add them in the app.');
+    lines.push('', d.exercises.length ? t('All planned sets done 💪') : t('No exercises yet — add them in the app.'));
     if (note) lines.push('', note);
-    return { text: lines.join('\n'), reply_markup: inline([[{ text: '🏁 Finish workout', callback_data: `w:f:${w.id}` }], [appButton('📱 Open in app')]]) };
+    return { text: lines.join('\n'), reply_markup: inline([[{ text: `🏁 ${t('Finish workout')}`, callback_data: `w:f:${w.id}` }], [appButton(`📱 ${t('Open in app')}`)]]) };
   }
 
   const track = ex.exercise.trackType;
@@ -57,19 +66,19 @@ export async function renderCard(user, workoutId, note = '') {
   const set = ex.sets.find((s) => !s.completed);
   const n = working.indexOf(set) + 1;
   const prev = ex.previous.filter((p) => p.setType !== 'warmup');
-  lines.push('', `<b>${esc(ex.exercise.name)}</b> — ${set.setType === 'warmup' ? 'warm-up' : `set ${n} of ${working.length}`}`);
-  if (prev.length) lines.push(`Last time: ${prev.map((p) => setText(p, track, unit)).join(', ')}`);
-  lines.push(`▶️ <b>${setText(set, track, unit)}</b>`);
+  lines.push('', `<b>${esc(catalogName(user.language, ex.exercise.name))}</b> — ${set.setType === 'warmup' ? t('warm-up') : t('set {n} of {total}', { n, total: working.length })}`);
+  if (prev.length) lines.push(`${t('Last time')}: ${prev.map((p) => setText(p, track, user)).join(', ')}`);
+  lines.push(`▶️ <b>${setText(set, track, user)}</b>`);
   if (note) lines.push('', note);
 
   const others = d.exercises.filter((e) => e.id !== ex.id && open(e));
   return {
     text: lines.join('\n'),
     reply_markup: inline([
-      [{ text: '✅ Done', callback_data: `w:d:${set.id}` }],
-      adjustButtons(set, track, unit),
-      [{ text: '⏭ Skip set', callback_data: `w:s:${set.id}` }, others.length ? { text: 'Next exercise ▸', callback_data: `w:n:${w.id}` } : null],
-      [appButton('📱 App'), { text: '🏁 Finish', callback_data: `w:f:${w.id}` }],
+      [{ text: `✅ ${t('Done')}`, callback_data: `w:d:${set.id}` }],
+      adjustButtons(set, track, user),
+      [{ text: `⏭ ${t('Skip set')}`, callback_data: `w:s:${set.id}` }, others.length ? { text: `${t('Next exercise')} ▸`, callback_data: `w:n:${w.id}` } : null],
+      [appButton(`📱 ${t('App')}`), { text: `🏁 ${t('Finish')}`, callback_data: `w:f:${w.id}` }],
     ]),
   };
 }
@@ -79,7 +88,8 @@ export async function showCard(user, chatId, workoutId, { messageId = null, note
   const card = await renderCard(user, workoutId, note);
   if (!card) {
     // Tapped on an old card after the workout was finished or discarded elsewhere.
-    if (messageId) await edit(chatId, messageId, 'This workout is already finished — see it in the app.', { reply_markup: inline([[appButton()]]) });
+    const t = tr(user);
+    if (messageId) await edit(chatId, messageId, t('This workout is already finished — see it in the app.'), { reply_markup: inline([[appButton(`📱 ${t('Open FitPro')}`)]]) });
     return null;
   }
   if (messageId) return edit(chatId, messageId, card.text, { reply_markup: card.reply_markup });
@@ -90,18 +100,19 @@ export async function showCard(user, chatId, workoutId, { messageId = null, note
 
 // "🏋️ Workout": the running workout's card, or a routine picker.
 export async function workoutMenu(user, chatId) {
+  const t = tr(user);
   const active = await getActiveWorkout(user.id);
   if (active) return showCard(user, chatId, active.id);
   const { routines, week } = await listRoutines(user);
   const todayId = (week.find((d) => d.isToday) || {}).routineId;
   if (!routines.length) {
-    return send(chatId, 'You have no routines yet. Create one in the app — e.g. “Push A” with bench, overhead press and dips.', { reply_markup: inline([[appButton('📱 Create a routine')]]) });
+    return send(chatId, t('You have no routines yet. Create one in the app — e.g. “Push A” with bench, overhead press and dips.'), { reply_markup: inline([[appButton(`📱 ${t('Create a routine')}`)]]) });
   }
   const sorted = [...routines].sort((a, b) => (b.id === todayId) - (a.id === todayId));
-  return send(chatId, 'Which workout?', {
+  return send(chatId, t('Which workout?'), {
     reply_markup: inline([
-      ...sorted.filter((r) => r.exerciseCount).slice(0, 8).map((r) => [{ text: `▶️ ${r.name}${r.id === todayId ? ' · today' : ''}`, callback_data: `w:go:${r.id}` }]),
-      [appButton('📱 Open app')],
+      ...sorted.filter((r) => r.exerciseCount).slice(0, 8).map((r) => [{ text: `▶️ ${r.name}${r.id === todayId ? ` · ${t('today')}` : ''}`, callback_data: `w:go:${r.id}` }]),
+      [appButton(`📱 ${t('Open app')}`)],
     ]),
   });
 }
@@ -115,7 +126,7 @@ async function startFromChat(user, chatId, messageId, routineId) {
     workoutId = (await getActiveWorkout(user.id)).id;
   }
   await setBotState(user.id, null);
-  await edit(chatId, messageId, '🏋️ Workout started — let’s go.');
+  await edit(chatId, messageId, `🏋️ ${tr(user)('Workout started — let’s go.')}`);
   return showCard({ ...user, botState: null }, chatId, workoutId);
 }
 
@@ -123,9 +134,11 @@ const FIELD = { w: 'weightKg', r: 'reps', t: 'durationSec', m: 'distanceM' };
 
 // Handles every "w:…" button. Returns the short text for answerCallbackQuery.
 export async function onWorkoutButton(user, chatId, messageId, data) {
+  const t = tr(user);
   const [, action, a, b, c] = data.split(':');
+  const pr = (p) => describePr(p, (kg) => kgText(kg, user), t);
 
-  if (action === 'go') { await startFromChat(user, chatId, messageId, Number(a)); return 'Started'; }
+  if (action === 'go') { await startFromChat(user, chatId, messageId, Number(a)); return t('Started'); }
 
   // Set buttons only act on an open workout's not-yet-done set; anything else
   // (an old card, a double tap) just refreshes the card.
@@ -138,20 +151,20 @@ export async function onWorkoutButton(user, chatId, messageId, data) {
 
   if (action === 'd') {
     const { set, gone, stale } = await liveSet(Number(a));
-    if (gone) return 'That set is gone';
-    if (stale) { await showCard(user, chatId, set.workoutId, { messageId }); return 'Already done'; }
+    if (gone) return t('That set is gone');
+    if (stale) { await showCard(user, chatId, set.workoutId, { messageId }); return t('Already done'); }
     const r = await updateSet(user, { id: set.id, completed: true });
-    const notes = r.prs.length ? r.prs.filter((p) => p.type !== 'reps_at_weight').map((p) => `🏆 New PR · ${describePr(p, (kg) => formatWeight(kg, user.weightUnit))}`) : [];
-    if (r.restEndsAt) notes.push(`⏱ Rest ${formatDuration(Math.round((new Date(r.restEndsAt).getTime() - Date.now()) / 1000))}`);
+    const notes = r.prs.length ? r.prs.filter((p) => p.type !== 'reps_at_weight').map((p) => `🏆 ${t('New PR')} · ${pr(p)}`) : [];
+    if (r.restEndsAt) notes.push(`⏱ ${t('Rest {time}', { time: formatDuration(Math.round((new Date(r.restEndsAt).getTime() - Date.now()) / 1000)) })}`);
     await db.update(T.workouts).set({ chatMessageId: messageId }).where(eq(T.workouts.id, set.workoutId)).run();
     await showCard(user, chatId, set.workoutId, { messageId, note: notes.join('\n') });
-    return r.prs.length ? '🏆 New PR!' : 'Done ✓';
+    return r.prs.length ? `🏆 ${t('New PR!')}` : t('Done ✓');
   }
 
   if (action === 'a') {
     const { set, gone, stale } = await liveSet(Number(a));
-    if (gone) return 'That set is gone';
-    if (stale) { await showCard(user, chatId, set.workoutId, { messageId }); return 'Already done'; }
+    if (gone) return t('That set is gone');
+    if (stale) { await showCard(user, chatId, set.workoutId, { messageId }); return t('Already done'); }
     const field = FIELD[b];
     let delta = Number(c);
     if (field === 'weightKg') delta = toKg(delta, user.weightUnit);
@@ -165,11 +178,11 @@ export async function onWorkoutButton(user, chatId, messageId, data) {
 
   if (action === 's') {
     const { set, gone, stale } = await liveSet(Number(a));
-    if (gone) return 'That set is gone';
-    if (stale) { await showCard(user, chatId, set.workoutId, { messageId }); return 'Already done'; }
+    if (gone) return t('That set is gone');
+    if (stale) { await showCard(user, chatId, set.workoutId, { messageId }); return t('Already done'); }
     await deleteSet(user, { id: set.id });
     await showCard(user, chatId, set.workoutId, { messageId });
-    return 'Skipped';
+    return t('Skipped');
   }
 
   if (action === 'n') {
@@ -182,23 +195,23 @@ export async function onWorkoutButton(user, chatId, messageId, data) {
     const state = { ...(user.botState || {}), focusWe: next ? next.id : null };
     await setBotState(user.id, state);
     await showCard({ ...user, botState: state }, chatId, Number(a), { messageId });
-    return next ? next.exercise.name : '';
+    return next ? catalogName(user.language, next.exercise.name) : '';
   }
 
   if (action === 'f') {
     const r = await finishWorkout(user, { id: Number(a) });
     await setBotState(user.id, null);
-    if (r.discarded) { await edit(chatId, messageId, 'Workout discarded — nothing was logged.'); return 'Discarded'; }
+    if (r.discarded) { await edit(chatId, messageId, t('Workout discarded — nothing was logged.')); return t('Discarded'); }
     const w = r.workout;
     const lines = [
-      `✅ <b>${esc(w.name)}</b> done`,
-      `${formatDuration(w.durationSec)} · ${r.totals.totalSets} sets · ${formatWeight(r.totals.totalVolumeKg, user.weightUnit, { digits: 0 })}`,
+      `✅ ${t('{name} done', { name: `<b>${esc(w.name)}</b>` })}`,
+      `${formatDuration(w.durationSec)} · ${t.n(r.totals.totalSets, '{n} set', '{n} sets')} · ${kgText(r.totals.totalVolumeKg, user, { digits: 0 })}`,
     ];
     const prs = r.prs.filter((p) => p.type !== 'reps_at_weight');
-    if (prs.length) lines.push('', '🏆 <b>New records</b>', ...prs.map((p) => `• ${esc(p.exerciseName)} — ${describePr(p, (kg) => formatWeight(kg, user.weightUnit))}`));
-    if (r.progression.length) lines.push('', `📈 ${r.progression.length} target${r.progression.length === 1 ? '' : 's'} went up for next time`);
-    await edit(chatId, messageId, lines.join('\n'), { reply_markup: inline([[appButton('📱 See in app')]]) });
-    return 'Finished 💪';
+    if (prs.length) lines.push('', `🏆 <b>${t('New records')}</b>`, ...prs.map((p) => `• ${esc(catalogName(user.language, p.exerciseName))} — ${pr(p)}`));
+    if (r.progression.length) lines.push('', `📈 ${t.n(r.progression.length, '{n} target went up for next time', '{n} targets went up for next time')}`);
+    await edit(chatId, messageId, lines.join('\n'), { reply_markup: inline([[appButton(`📱 ${t('See in app')}`)]]) });
+    return t('Finished 💪');
   }
   return '';
 }

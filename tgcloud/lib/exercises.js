@@ -5,6 +5,7 @@ import * as v from './validate.js';
 import { visible, own, fromUnix } from './db-util.js';
 import { exerciseRecords } from './prs.js';
 import { round } from './units.js';
+import { catalogName } from './i18n/catalog.js';
 
 const E = T.exercises;
 
@@ -22,7 +23,8 @@ export async function listExercises(user, input = {}) {
   let rows = await db.select().from(E).where(and(...conds)).orderBy(asc(E.name)).all();
   if (q) {
     const needle = q.toLowerCase();
-    rows = rows.filter((e) => e.name.toLowerCase().includes(needle) || (e.aliases || []).some((a) => a.includes(needle)));
+    const local = (e) => (e.userId === 0 ? catalogName(user.language, e.name).toLowerCase() : '');
+    rows = rows.filter((e) => e.name.toLowerCase().includes(needle) || local(e).includes(needle) || (e.aliases || []).some((a) => a.includes(needle)));
   }
 
   const S = T.sets;

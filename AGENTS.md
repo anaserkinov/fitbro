@@ -128,6 +128,13 @@ Full API in [docs/tgcloud-sdk.md](docs/tgcloud-sdk.md). The non-obvious parts:
   Deleting the declaration does *not* drop anything.
 - **Type changes aren't automatic** — do them by hand with `db.run(...)`.
 
+## Languages (en / ru / uz)
+
+User-facing text is translated: the English text is the key (`t('Rest day')`), and
+Russian/Uzbek go in dictionaries. Mini App: `t`/`cname` from `src/lib/i18n.js`. Bot:
+`tr(user)` from `tgcloud/lib/i18n/bot.js`. New text needs ru + uz entries. See
+[docs/i18n.md](docs/i18n.md) for how it works, the voice to write in and the glossary.
+
 ## Deploy & migrate workflow
 
 **Deploying never touches the database.** Schema sync is a separate, explicit step.

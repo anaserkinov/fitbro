@@ -1,8 +1,13 @@
 import { useApi } from '../lib/api.js';
 import { useUser, useNav } from '../lib/app-state.jsx';
 import { describePr } from '../../tgcloud/lib/strength.js';
+import { workoutName } from '../lib/workout-start.js';
+import { t, cname } from '../lib/i18n.js';
 import { MainButton, Section, List, Row } from '../ui/kit.jsx';
 import { Icon } from '../ui/icons.jsx';
+
+// A PR in the user's language, e.g. 'Heaviest set: 85 kg × 3'.
+export const describePrT = (pr, w) => describePr(pr, w, t);
 
 const PR_ORDER = ['max_weight', 'e1rm', 'reps_at_weight', 'max_reps', 'session_volume', 'max_duration', 'max_distance'];
 
@@ -20,31 +25,31 @@ export default function WorkoutSummary({ result }) {
         <span style={{ width: 64, height: 64, borderRadius: 32, background: 'var(--good)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="check" size={34} stroke={3} />
         </span>
-        <h1 className="title">Workout done</h1>
-        <p className="hint">{workout.name}</p>
+        <h1 className="title">{t('Workout done')}</h1>
+        <p className="hint">{workoutName(workout.name)}</p>
       </div>
 
       <div className="grid3">
-        <div className="card tight center"><div className="mid-num">{fmt.dur(workout.durationSec)}</div><div className="tiny hint">Duration</div></div>
-        <div className="card tight center"><div className="mid-num">{totals.totalSets}</div><div className="tiny hint">{totals.totalSets === 1 ? 'Set' : 'Sets'}</div></div>
-        <div className="card tight center"><div className="mid-num">{fmt.n(fmt.wNum(totals.totalVolumeKg))}</div><div className="tiny hint">{fmt.weightUnit} volume</div></div>
+        <div className="card tight center"><div className="mid-num">{fmt.dur(workout.durationSec)}</div><div className="tiny hint">{t('Duration')}</div></div>
+        <div className="card tight center"><div className="mid-num">{totals.totalSets}</div><div className="tiny hint">{t.n(totals.totalSets, 'Set@count', 'Sets@count')}</div></div>
+        <div className="card tight center"><div className="mid-num">{fmt.n(fmt.wNum(totals.totalVolumeKg))}</div><div className="tiny hint">{t('{unit} volume', { unit: fmt.weightLabel })}</div></div>
       </div>
 
       {sortedPrs.length > 0 && (
-        <Section title={`New records · ${sortedPrs.length}`}>
+        <Section title={t('New records · {n}', { n: sortedPrs.length })}>
           <List>
             {sortedPrs.map((p, i) => (
-              <Row key={i} icon="trophy" iconColor="#E8A400" title={p.exerciseName} sub={describePr(p, (kg) => fmt.w(kg))} />
+              <Row key={i} icon="trophy" iconColor="#E8A400" title={cname(p.exerciseName)} sub={describePrT(p, (kg) => fmt.w(kg))} />
             ))}
           </List>
         </Section>
       )}
 
       {progression.length > 0 && (
-        <Section title="Next time" footer="You hit every target rep, so these targets went up.">
+        <Section title={t('Next time')} footer={t('You hit every target rep, so these targets went up.')}>
           <List>
             {progression.map((p) => (
-              <Row key={p.routineExerciseId} icon="arrowUp" iconColor="var(--good)" title={names.get(p.exerciseId) || 'Exercise'}
+              <Row key={p.routineExerciseId} icon="arrowUp" iconColor="var(--good)" title={names.has(p.exerciseId) ? cname(names.get(p.exerciseId)) : t('Exercise')}
                 value={`${fmt.w(p.fromKg)} → ${fmt.w(p.toKg)}`} />
             ))}
           </List>
@@ -52,10 +57,10 @@ export default function WorkoutSummary({ result }) {
       )}
 
       {!sortedPrs.length && !progression.length && (
-        <p className="center hint">Consistency is the PR. See you next session.</p>
+        <p className="center hint">{t('Consistency is the PR. See you next session.')}</p>
       )}
 
-      <MainButton text="Done" onClick={() => nav.pop()} />
+      <MainButton text={t('Done')} onClick={() => nav.pop()} />
     </div>
   );
 }

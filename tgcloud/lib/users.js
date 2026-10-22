@@ -4,6 +4,7 @@ import * as T from '../schema.js';
 import { computeTargets } from './nutrition.js';
 import { localDate, isValidTimezone, ageOn } from './dates.js';
 import * as v from './validate.js';
+import { pickLanguage } from './i18n/core.js';
 
 // Users are keyed by Telegram user id. Every entry point (chat handler or Mini App
 // endpoint) calls ensureUser() with the Telegram `User` object it received.
@@ -18,8 +19,9 @@ export async function ensureUser(tg) {
   // Most calls find the user unchanged — skip the write then.
   const existing = await getUser(tg.id);
   if (existing && Object.keys(fields).every((k) => existing[k] === fields[k])) return existing;
+  // A new user starts in their Telegram language; after that it's their choice.
   const rows = await db.insert(T.users)
-    .values({ id: tg.id, ...fields })
+    .values({ id: tg.id, language: pickLanguage(tg.language_code), ...fields })
     .onConflictDoUpdate({ target: T.users.id, set: fields })
     .returning();
   return rows[0];

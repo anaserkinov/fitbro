@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useApi, call, mutate, invalidate, AFFECTS } from '../lib/api.js';
 import { useUser, useNav } from '../lib/app-state.jsx';
 import { shortDay } from '../lib/format.js';
-import { describePr } from '../../tgcloud/lib/strength.js';
+import { describePrT } from './WorkoutSummary.jsx';
+import { workoutName } from '../lib/workout-start.js';
+import { t, cname } from '../lib/i18n.js';
 import { Loader, MainButton, NumberInput, Sheet, List, Row, Stepper, toast, toastError } from '../ui/kit.jsx';
 import ExercisePicker from '../ui/ExercisePicker.jsx';
 import { Icon } from '../ui/icons.jsx';
@@ -31,6 +33,7 @@ function useNow(active) {
   return now;
 }
 
+// Labels are translation keys — wrap with t() at render.
 const SET_TYPES = [
   { value: 'working', label: 'Working set' },
   { value: 'warmup', label: 'Warm-up' },
@@ -38,17 +41,18 @@ const SET_TYPES = [
   { value: 'failure', label: 'To failure' },
 ];
 
+// One-letter badges: W(arm-up), D(rop), F(ailure) — localised.
 function setLabel(set, index) {
-  if (set.setType === 'warmup') return 'W';
-  if (set.setType === 'drop') return 'D';
-  if (set.setType === 'failure') return 'F';
+  if (set.setType === 'warmup') return t('W@warmup');
+  if (set.setType === 'drop') return t('D@drop');
+  if (set.setType === 'failure') return t('F@failure');
   return String(index);
 }
 
 function previousText(p, fmt, track) {
   if (!p) return '—';
   if (track === 'duration') return clock(p.durationSec || 0);
-  if (track === 'distance_duration') return `${((p.distanceM || 0) / 1000).toFixed(2)} km`;
+  if (track === 'distance_duration') return `${((p.distanceM || 0) / 1000).toFixed(2)} ${t('km')}`;
   if (track === 'bodyweight_reps' || !p.weightKg) return p.reps ? `× ${p.reps}` : '—';
   return `${fmt.w(p.weightKg, { suffix: false })} × ${p.reps ?? '—'}`;
 }
@@ -69,22 +73,22 @@ function SetRow({ set, number, current, track, fmt, prev, onChange, onMenu }) {
   const label = setLabel(set, number);
   return (
     <div className={cls + grid}>
-      <button type="button" className={`set-label${set.setType === 'warmup' ? ' warm' : ''}`} onClick={onMenu} aria-label={`Set ${label} options`}>{label}</button>
+      <button type="button" className={`set-label${set.setType === 'warmup' ? ' warm' : ''}`} onClick={onMenu} aria-label={t('Set {label} options', { label })}>{label}</button>
       <span className="small hint ellipsis">{previousText(prev, fmt, track)}</span>
       {(track === 'weight_reps' || track === 'weighted_bodyweight') && (
-        <NumberInput className="inline-input" value={fmt.wNum(set.weightKg)} decimals={2} label={`Set ${label} weight`}
+        <NumberInput className="inline-input" value={fmt.wNum(set.weightKg)} decimals={2} label={t('Set {label} weight', { label })}
           onCommit={(v) => onChange({ weightKg: fmt.toKg(v) })} placeholder={track === 'weighted_bodyweight' ? '+0' : '0'} />
       )}
       {track === 'distance_duration' && (
-        <NumberInput className="inline-input" value={set.distanceM === null ? null : set.distanceM / 1000} decimals={2} label={`Set ${label} distance in km`}
-          onCommit={(v) => onChange({ distanceM: v === null ? null : Math.round(v * 1000) })} placeholder="km" />
+        <NumberInput className="inline-input" value={set.distanceM === null ? null : set.distanceM / 1000} decimals={2} label={t('Set {label} distance in km', { label })}
+          onCommit={(v) => onChange({ distanceM: v === null ? null : Math.round(v * 1000) })} placeholder={t('km')} />
       )}
       {track === 'duration' || track === 'distance_duration' ? (
-        <TimeInput value={set.durationSec} label={`Set ${label} time`} onCommit={(v) => onChange({ durationSec: v })} />
+        <TimeInput value={set.durationSec} label={t('Set {label} time', { label })} onCommit={(v) => onChange({ durationSec: v })} />
       ) : (
-        <NumberInput className="inline-input" value={set.reps} decimals={0} label={`Set ${label} reps`} onCommit={(v) => onChange({ reps: v })} placeholder="0" />
+        <NumberInput className="inline-input" value={set.reps} decimals={0} label={t('Set {label} reps', { label })} onCommit={(v) => onChange({ reps: v })} placeholder="0" />
       )}
-      <button type="button" className="check" aria-pressed={!!set.completed} aria-label={set.completed ? `Undo set ${label}` : `Complete set ${label}`}
+      <button type="button" className="check" aria-pressed={!!set.completed} aria-label={set.completed ? t('Undo set {label}', { label }) : t('Complete set {label}', { label })}
         onClick={() => onChange({ completed: !set.completed })}>
         <Icon name="check" size={18} stroke={2.6} />
       </button>
@@ -99,13 +103,13 @@ function RestBanner({ endsAt, total, onAdjust, onSkip, now }) {
     <div className="rest" role="timer" aria-live="off">
       <div className="row-between">
         <div>
-          <div className="eyebrow">{left > 0 ? 'Rest' : 'Ready for next set'}</div>
+          <div className="eyebrow">{left > 0 ? t('Rest') : t('Ready for next set')}</div>
           <div style={{ fontSize: 30, lineHeight: '36px', fontWeight: 700, letterSpacing: -0.5 }}>{clock(left)}</div>
         </div>
         <div className="rest-btns">
           <button type="button" onClick={() => onAdjust(left - 15)}>−15</button>
           <button type="button" onClick={() => onAdjust(left + 15)}>+15</button>
-          <button type="button" className="solid" onClick={onSkip}>Skip</button>
+          <button type="button" className="solid" onClick={onSkip}>{t('Skip')}</button>
         </div>
       </div>
       <div className="bar"><div style={{ width: `${total ? Math.min(100, (left / total) * 100) : 0}%` }} /></div>
@@ -144,7 +148,7 @@ export default function Workout({ id }) {
       if (r.prs.length) {
         haptic.success();
         const best = r.prs.find((p) => p.type === 'max_weight') || r.prs.find((p) => p.type === 'e1rm') || r.prs[0];
-        toast(`New PR · ${describePr(best, (kg) => fmt.w(kg))}`, 'gold');
+        toast(t('New PR · {pr}', { pr: describePrT(best, (kg) => fmt.w(kg)) }), 'gold');
       }
       invalidate('getToday');
     } catch (e) {
@@ -170,19 +174,19 @@ export default function Workout({ id }) {
 
   async function finish() {
     const left = data.exercises.reduce((a, e) => a + e.sets.filter((s) => !s.completed).length, 0);
-    if (left && !(await confirmDialog(`${left} set${left === 1 ? '' : 's'} not ticked will be removed. Finish workout?`))) return;
+    if (left && !(await confirmDialog(t.n(left, '{n} set not ticked will be removed. Finish workout?', '{n} sets not ticked will be removed. Finish workout?')))) return;
     setFinishing(true);
     try {
       const r = await mutate('finishWorkout', { id: data.workout.id }, AFFECTS.workout);
       haptic.success();
-      if (r.discarded) { toast('Nothing logged — workout discarded'); nav.pop(); }
+      if (r.discarded) { toast(t('Nothing logged — workout discarded')); nav.pop(); }
       else nav.replace('WorkoutSummary', { result: r });
     } catch (e) { toastError(e); } finally { setFinishing(false); }
   }
 
   async function discard() {
     setExMenu(null);
-    if (!(await confirmDialog('Discard this workout? Nothing from it will be saved.'))) return;
+    if (!(await confirmDialog(t('Discard this workout? Nothing from it will be saved.')))) return;
     try { await mutate('discardWorkout', { id: data.workout.id }, AFFECTS.workout); nav.pop(); } catch (e) { toastError(e); }
   }
 
@@ -190,7 +194,7 @@ export default function Workout({ id }) {
     <div className="screen sub">
       <Loader q={q}>
         {(d) => {
-          if (!d.workout) return <div className="empty">This workout no longer exists.</div>;
+          if (!d.workout) return <div className="empty">{t('This workout no longer exists.')}</div>;
           const w = d.workout;
           const elapsed = open ? (now - new Date(w.startedAt).getTime()) / 1000 : w.durationSec;
           const restOn = open && w.restEndsAt && new Date(w.restEndsAt).getTime() > now - 15000;
@@ -204,9 +208,9 @@ export default function Workout({ id }) {
             <>
               <div className="row-between" style={{ padding: '0 4px' }}>
                 <div className="stack-sm" style={{ gap: 2, minWidth: 0 }}>
-                  <h1 className="title ellipsis">{w.name}</h1>
+                  <h1 className="title ellipsis">{workoutName(w.name)}</h1>
                   <span className="small hint">
-                    {open ? '' : `${shortDay(w.localDate)} · `}{doneSets.length} of {live.filter((s) => s.setType !== 'warmup').length} sets · {fmt.w(volume, { digits: 0 })}
+                    {open ? '' : `${shortDay(w.localDate)} · `}{t.n(live.filter((s) => s.setType !== 'warmup').length, '{done} of {n} set', '{done} of {n} sets', { done: doneSets.length })} · {fmt.w(volume, { digits: 0 })}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -214,7 +218,7 @@ export default function Workout({ id }) {
                     {open && <span style={{ width: 8, height: 8, borderRadius: 4, background: '#E5484D' }} />}
                     {clock(elapsed || 0)}
                   </span>
-                  <button type="button" className="icon-btn" aria-label="Workout options" onClick={() => setExMenu('workout')}><Icon name="more" size={22} stroke={3} /></button>
+                  <button type="button" className="icon-btn" aria-label={t('Workout options')} onClick={() => setExMenu('workout')}><Icon name="more" size={22} stroke={3} /></button>
                 </div>
               </div>
 
@@ -227,19 +231,19 @@ export default function Workout({ id }) {
                   <div key={e.id} className="ex-card">
                     <div className="ex-head">
                       <button type="button" style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 0, padding: 0 }} onClick={() => nav.push('ExerciseDetail', { id: e.exercise.id })}>
-                        <div className="bold ellipsis" style={{ fontSize: 17 }}>{e.exercise.name}</div>
+                        <div className="bold ellipsis" style={{ fontSize: 17 }}>{cname(e.exercise.name)}</div>
                         <div className="small hint ellipsis">
-                          {working.length ? `Last time · ${working.map((p) => previousText(p, fmt, e.exercise.trackType)).join(', ')}` : e.target ? `Target ${e.target.sets} × ${e.target.repsMin === e.target.repsMax ? e.target.repsMin : `${e.target.repsMin}–${e.target.repsMax}`}` : 'First time — have fun'}
+                          {working.length ? t('Last time · {sets}', { sets: working.map((p) => previousText(p, fmt, e.exercise.trackType)).join(', ') }) : e.target ? t('Target {sets} × {reps}', { sets: e.target.sets, reps: e.target.repsMin === e.target.repsMax ? e.target.repsMin : `${e.target.repsMin}–${e.target.repsMax}` }) : t('First time — have fun')}
                         </div>
                       </button>
                       {e.bestWeightKg && <span className="badge gold"><Icon name="trophy" size={13} stroke={2.4} />PR {fmt.w(e.bestWeightKg)}</span>}
-                      <button type="button" className="icon-btn" style={{ width: 32, height: 32, background: 'transparent' }} aria-label={`${e.exercise.name} options`} onClick={() => setExMenu(e)}><Icon name="more" size={20} stroke={3} /></button>
+                      <button type="button" className="icon-btn" style={{ width: 32, height: 32, background: 'transparent' }} aria-label={t('{name} options', { name: cname(e.exercise.name) })} onClick={() => setExMenu(e)}><Icon name="more" size={20} stroke={3} /></button>
                     </div>
                     <div className={`set-grid set-head${e.exercise.trackType === 'weight_reps' || e.exercise.trackType === 'weighted_bodyweight' ? '' : e.exercise.trackType === 'distance_duration' ? ' time-dist' : ' no-weight'}`}>
-                      <span>Set</span><span>Previous</span>
-                      {(e.exercise.trackType === 'weight_reps' || e.exercise.trackType === 'weighted_bodyweight') && <span className="center">{e.exercise.trackType === 'weighted_bodyweight' ? `+${fmt.weightUnit}` : fmt.weightUnit}</span>}
-                      {e.exercise.trackType === 'distance_duration' && <span className="center">km</span>}
-                      <span className="center">{e.exercise.trackType === 'duration' || e.exercise.trackType === 'distance_duration' ? 'Time' : 'Reps'}</span><span />
+                      <span>{t('Set')}</span><span>{t('Previous')}</span>
+                      {(e.exercise.trackType === 'weight_reps' || e.exercise.trackType === 'weighted_bodyweight') && <span className="center">{e.exercise.trackType === 'weighted_bodyweight' ? `+${fmt.weightLabel}` : fmt.weightLabel}</span>}
+                      {e.exercise.trackType === 'distance_duration' && <span className="center">{t('km')}</span>}
+                      <span className="center">{e.exercise.trackType === 'duration' || e.exercise.trackType === 'distance_duration' ? t('Time') : t('Reps')}</span><span />
                     </div>
                     {e.sets.map((s, i) => {
                       if (s.setType !== 'warmup') n += 1;
@@ -250,55 +254,55 @@ export default function Workout({ id }) {
                       );
                     })}
                     <button type="button" className="add-set" onClick={() => { haptic.tap(); run('addSet', { workoutExerciseId: e.id }); }}>
-                      <Icon name="plus" size={16} stroke={2.4} />Add set
+                      <Icon name="plus" size={16} stroke={2.4} />{t('Add set')}
                     </button>
                   </div>
                 );
               })}
 
-              <button type="button" className="btn plain lg block" onClick={() => setPicker(true)}><Icon name="plus" size={18} stroke={2.4} />Add exercise</button>
-              {w.notes && <p className="small hint" style={{ padding: '0 4px' }}>Notes: {w.notes}</p>}
+              <button type="button" className="btn plain lg block" onClick={() => setPicker(true)}><Icon name="plus" size={18} stroke={2.4} />{t('Add exercise')}</button>
+              {w.notes && <p className="small hint" style={{ padding: '0 4px' }}>{t('Notes: {notes}', { notes: w.notes })}</p>}
 
               <ExercisePicker open={picker} onClose={() => setPicker(false)} onPick={(ex) => { setPicker(false); run('addWorkoutExercise', { workoutId: w.id, exerciseId: ex.id }); }} />
 
-              <Sheet open={!!setMenu} onClose={() => setSetMenu(null)} title="Set">
+              <Sheet open={!!setMenu} onClose={() => setSetMenu(null)} title={t('Set')}>
                 {setMenu && (
                   <>
                     <List>
-                      {SET_TYPES.map((t) => (
-                        <Row key={t.value} title={t.label} onClick={() => { changeSet(setMenu.ex, setMenu.set, { setType: t.value }); setSetMenu(null); }}>
-                          {setMenu.set.setType === t.value && <Icon name="check" size={18} color="var(--link)" stroke={2.6} />}
+                      {SET_TYPES.map((st) => (
+                        <Row key={st.value} title={t(st.label)} onClick={() => { changeSet(setMenu.ex, setMenu.set, { setType: st.value }); setSetMenu(null); }}>
+                          {setMenu.set.setType === st.value && <Icon name="check" size={18} color="var(--link)" stroke={2.6} />}
                         </Row>
                       ))}
                     </List>
-                    <button type="button" className="btn danger block" style={{ background: 'var(--field)' }} onClick={() => { const s = setMenu.set; setSetMenu(null); run('deleteSet', { id: s.id }); }}>Delete set</button>
+                    <button type="button" className="btn danger block" style={{ background: 'var(--field)' }} onClick={() => { const s = setMenu.set; setSetMenu(null); run('deleteSet', { id: s.id }); }}>{t('Delete set')}</button>
                   </>
                 )}
               </Sheet>
 
-              <Sheet open={!!exMenu} onClose={() => setExMenu(null)} title={exMenu === 'workout' ? 'Workout' : exMenu?.exercise?.name}>
+              <Sheet open={!!exMenu} onClose={() => setExMenu(null)} title={exMenu === 'workout' ? t('Workout') : exMenu?.exercise && cname(exMenu.exercise.name)}>
                 {exMenu === 'workout' ? (
                   <List>
-                    <Row title="Discard workout" danger onClick={discard} />
+                    <Row title={t('Discard workout')} danger onClick={discard} />
                   </List>
                 ) : exMenu && (
                   <>
                     <div className="stack-sm">
-                      <span className="label">Rest between sets</span>
-                      <Stepper value={(exMenu.restSec || 0) / 60} step={0.25} decimals={2} unit="min" label="rest"
+                      <span className="label">{t('Rest between sets')}</span>
+                      <Stepper value={(exMenu.restSec || 0) / 60} step={0.25} decimals={2} unit={t('min')} label={t('rest')}
                         onChange={(v) => { const sec = Math.max(0, Math.round(v * 60)); setExMenu({ ...exMenu, restSec: sec }); }} />
                     </div>
                     <List>
-                      <Row title="Save rest time" onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, restSec: e.restSec }); }} />
-                      <Row title="Move up" onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, position: Math.max(0, d.exercises.indexOf(d.exercises.find((x) => x.id === e.id)) - 1) }); }} />
-                      <Row title="Move down" onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, position: d.exercises.findIndex((x) => x.id === e.id) + 1 }); }} />
-                      <Row title="Remove exercise" danger onClick={async () => { const e = exMenu; setExMenu(null); if (await confirmDialog(`Remove ${e.exercise.name} and its sets?`)) run('removeWorkoutExercise', { id: e.id }); }} />
+                      <Row title={t('Save rest time')} onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, restSec: e.restSec }); }} />
+                      <Row title={t('Move up')} onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, position: Math.max(0, d.exercises.indexOf(d.exercises.find((x) => x.id === e.id)) - 1) }); }} />
+                      <Row title={t('Move down')} onClick={() => { const e = exMenu; setExMenu(null); run('updateWorkoutExercise', { id: e.id, position: d.exercises.findIndex((x) => x.id === e.id) + 1 }); }} />
+                      <Row title={t('Remove exercise')} danger onClick={async () => { const e = exMenu; setExMenu(null); if (await confirmDialog(t('Remove {name} and its sets?', { name: cname(e.exercise.name) }))) run('removeWorkoutExercise', { id: e.id }); }} />
                     </List>
                   </>
                 )}
               </Sheet>
 
-              {open && <MainButton text="Finish workout" busy={finishing} onClick={finish} />}
+              {open && <MainButton text={t('Finish workout')} busy={finishing} onClick={finish} />}
             </>
           );
         }}

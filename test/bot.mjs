@@ -91,4 +91,19 @@ assert.equal(photos.length, 1); assert.equal(photos[0].fileId, 'L'); assert.equa
 reset(); await onMessage({ message_id: 1, from, chat: { id: -100, type: 'group' }, text: '82' }); assert.equal(calls().length, 0); ok('ignores group chats');
 
 await endpoint('deleteMyData', { confirm: 'DELETE' });
+
+// Languages: a new user starts in their Telegram language and can switch in the app.
+const ru = { id: 445, first_name: 'Аня', language_code: 'ru' };
+const sayAs = (u, text) => onMessage({ message_id: ++msgId, from: u, chat: { id: u.id, type: 'private' }, text });
+const endpointAs = async (u, name, input) => (await import(`../tgcloud/endpoints/${name}.js`)).default(input, { initData: { user: u } });
+reset(); await sayAs(ru, '/start');
+assert.match(sent()[0].text, /Привет, Аня!/); assert.equal(sent()[0].reply_markup.keyboard[0][1].text, '📊 Сегодня');
+assert.equal(buttons(sent()[1])[0].text, '📱 Настроить FitPro'); ok('Telegram language ru → Russian welcome and keyboard');
+await endpointAs(ru, 'completeOnboarding', { sex: 'female', birthDate: '1998-05-01', heightCm: 165, weightKg: 60, activityLevel: 'moderate', goal: 'cut', timezone: 'UTC' });
+reset(); await sayAs(ru, '62,5'); assert.match(last().text, /Записал <b>62,5 кг<\/b>/); assert.equal(buttons(last())[0].text, '↩️ Отменить'); ok('ru: weight with decimal comma and кг');
+reset(); await endpointAs(ru, 'updateSettings', { language: 'uz' });
+assert.match(last().text, /o‘zbekcha/); assert.equal(last().reply_markup.keyboard[0][0].text, '🏋️ Mashg‘ulot'); ok('switching language sends a fresh keyboard');
+reset(); await sayAs(ru, '📊 Сегодня'); assert.match(last().text, /📊 <b>Bugun<\/b>/); ok('an old-language button still works, reply in the new language');
+await endpointAs(ru, 'deleteMyData', { confirm: 'DELETE' });
+
 console.log(`\nAll ${n} chat checks passed`);
