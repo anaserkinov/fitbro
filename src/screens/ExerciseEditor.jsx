@@ -7,9 +7,9 @@ import { haptic, confirmDialog } from '../lib/tg.js';
 import { t, cname } from '../lib/i18n.js';
 import { EQUIPMENT_LABEL } from './ExerciseDetail.jsx';
 
-const MUSCLES = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'cardio', 'full_body'];
-const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'kettlebell', 'band', 'other'];
-const TRACK = [
+export const MUSCLES = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'cardio', 'full_body'];
+export const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'kettlebell', 'band', 'other'];
+export const TRACK = [
   { value: 'weight_reps', label: 'Weight × reps' },
   { value: 'bodyweight_reps', label: 'Bodyweight reps' },
   { value: 'weighted_bodyweight', label: 'Bodyweight + added weight' },
