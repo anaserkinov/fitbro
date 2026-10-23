@@ -12,7 +12,7 @@ import { applyProgression } from './progression.js';
 import { restsAfter, normalizeGroups } from './supersets.js';
 import { recordWorkoutActivity, recordAchievementActivity, deleteWorkoutActivity } from './activity.js';
 import { evaluateAchievements } from './achievements.js';
-import { programPlan, isProgramRoutine } from './programs.js';
+import { programPlan, isProgramRoutine, applyProgramProgress, programNotes } from './programs.js';
 
 const W = T.workouts, WE = T.workoutExercises, S = T.sets, P = T.personalRecords;
 
@@ -34,7 +34,7 @@ async function previousSets(userId, exerciseId, workoutId) {
 
 // Adds an exercise to a workout with planned (not yet completed) sets, pre-filled from
 // the routine target or, failing that, the previous session.
-// `plan` (programs): (exerciseId, previousSets) → this week's planned sets, or null.
+// `plan` (programs): exerciseId → this week's planned sets, or null.
 async function addExercise(user, workout, exerciseId, { position, item = null, sets = null, plan = null }) {
   const ex = await getExercise(user.id, exerciseId);
   const [we] = await db.insert(WE).values({
@@ -45,7 +45,7 @@ async function addExercise(user, workout, exerciseId, { position, item = null, s
   }).returning();
 
   const prev = (await previousSets(user.id, ex.id, workout.id)).filter((s) => s.setType !== 'warmup');
-  const planned = plan ? plan(ex.id, prev) : null;
+  const planned = plan ? plan(ex.id) : null;
   if (planned) {
     await insertChunked(S, planned.map((p, i) => ({
       userId: user.id, workoutId: workout.id, workoutExerciseId: we.id, exerciseId: ex.id,
@@ -116,6 +116,7 @@ export async function getWorkout(user, input = {}) {
   const bests = exIds.length ? await db.select({ exerciseId: P.exerciseId, best: sql`max(${P.value})` }).from(P)
     .where(and(eq(P.userId, user.id), eq(P.type, 'max_weight'), inArray(P.exerciseId, exIds))).groupBy(P.exerciseId).all() : [];
   const bestById = new Map(bests.map((b) => [b.exerciseId, Number(b.best)]));
+  const notes = await programNotes(user, workout);   // open program workout: calibration and why weights changed
 
   const exercises = [];
   for (const we of wes) {
@@ -130,6 +131,7 @@ export async function getWorkout(user, input = {}) {
       sets: sets.filter((s) => s.workoutExerciseId === we.id),
       previous: prev.map((s) => ({ setType: s.setType, weightKg: s.weightKg, reps: s.reps, durationSec: s.durationSec, distanceM: s.distanceM })),
       bestWeightKg: bestById.get(we.exerciseId) ?? null,
+      ...(notes && notes.has(we.exerciseId) ? { program: notes.get(we.exerciseId) } : {}),
     });
   }
   const totals = summarizeSets(sets.map((s) => ({ ...s, trackType: exById.get(s.exerciseId)?.trackType })));
@@ -321,7 +323,7 @@ export async function discardWorkout(user, input) {
 }
 
 // Drops planned-but-not-done sets, saves totals, records session PRs and applies
-// progression. A workout with no completed sets is discarded instead.
+// progression (routine targets, or the program's lift states). A workout with no completed sets is discarded instead.
 export async function finishWorkout(user, input) {
   const w = await own(W, v.id(input.id), user.id, 'Workout');
   if (w.endedAt) refuse('This workout is already finished', 'ALREADY_FINISHED');
@@ -355,11 +357,12 @@ export async function finishWorkout(user, input) {
 
   await recordSessionVolumePrs(user.id, w.id);
   const progression = await applyProgression(user.id, w.id);
+  const programChanges = await applyProgramProgress(user, workout);
   const prs = await prHighlights(user.id, { workoutId: w.id });
   await recordWorkoutActivity(user, workout, prs);   // friends feed; pings go out from tick
   const { announced } = await evaluateAchievements(user);
   await recordAchievementActivity(user, announced, workout.localDate);
-  return { workout, totals, prs, progression, achievements: announced };
+  return { workout, totals, prs, progression, programChanges, achievements: announced };
 }
 
 // Finished workouts between two dates, newest first (history list / calendar).

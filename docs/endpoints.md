@@ -54,7 +54,7 @@ The app converts to the user's `weightUnit` / `energyUnit` for display.
 | Endpoint | Input | Returns |
 |---|---|---|
 | `startWorkout` | `routineId?, name?, date?` | workout detail (below) |
-| `getWorkout` | `id?` (omit = the open one) | `{ workout, exercises: [{ exercise, target, sets, previous, restSec, bestWeightKg }], totals }` or `{ workout: null }` |
+| `getWorkout` | `id?` (omit = the open one) | `{ workout, exercises: [{ exercise, target, sets, previous, restSec, bestWeightKg, program? }], totals }` or `{ workout: null }` |
 | `addWorkoutExercise` | `workoutId, exerciseId, sets?` | workout detail |
 | `updateWorkoutExercise` | `id` + `restSec?, supersetGroup?, notes?, position?` | workout detail |
 | `removeWorkoutExercise` | `id` | workout detail |
@@ -62,7 +62,7 @@ The app converts to the user's `weightUnit` / `energyUnit` for display.
 | `updateSet` | `id` + any of `weightKg, reps, durationSec, distanceM, kcal, rpe, rir, setType, completed` | `{ set, prs, restEndsAt }` — `prs` = records just broken |
 | `deleteSet` | `id` | `{ ok }` |
 | `setRest` | `workoutId, seconds` (0 = clear) | `{ restEndsAt }` |
-| `finishWorkout` | `id, notes?` | `{ workout, totals, prs, progression, achievements }` or `{ discarded: true }` if nothing was done |
+| `finishWorkout` | `id, notes?` | `{ workout, totals, prs, progression, programChanges, achievements }` or `{ discarded: true }` if nothing was done |
 | `discardWorkout` | `id` | `{ ok }` |
 | `listWorkouts` | `from, to` | `{ workouts }` (finished, newest first, with `prs`) |
 
@@ -139,12 +139,17 @@ volume `{ volumeKg, sets }`; strength `{ bodyWeightKg, lifts: [{ exercise, e1rmK
 | `getAchievements` | — | `{ achievements: [{ code, earnedAt }], earnedCount }` — catalogue in `lib/data/achievements.js` |
 | `listPrograms` | — | `{ programs, activeCode, suggestedMaxes }` (5/3/1 1RMs from the last 90 days) |
 | `enrollProgram` | `code` + `oneRepMaxes?: { ohp, deadlift, bench, squat }` (kg, 5/3/1) | same as `getMyProgram` — creates the routines and **replaces the weekly schedule** |
-| `getMyProgram` | — | `{ program, enrollment, weekIndex, week, of, cycle, deload, routines }` or `{ program: null, lastEnded }` |
+| `getMyProgram` | — | `{ program, enrollment, weekIndex, week, of, cycle, deload, sessionsDone, sessionsThisWeek, daysPerWeek, routines }` or `{ program: null, lastEnded }` |
 | `leaveProgram` | — | `{ left: true }` — routines archived, schedule days cleared, workouts kept |
 | `exportData` | — | `{ files }` — the bot sends CSVs to your chat; once an hour |
 
 `finishWorkout` also returns `achievements: [{ code }]` (newly earned). Starting a program's
-routine pre-fills that week's prescribed sets; its exercises have `target: null`.
+routine pre-fills that week's prescribed sets from each exercise's lift state; its exercises have
+`target: null` and, while the workout is open, `program: { calibrate, guess, change }` — `calibrate`
+= nothing known yet, this session sets the weight (log `rir` on the sets); `change` = why the weight
+changed (`{ kind: 'up' | 'hold' | 'reset' | 'break' | 'calibrated', fromKg, toKg }`). Finishing it
+advances the lift states and returns the changes as `programChanges: [{ exerciseId, exerciseName,
+kind, fromKg, toKg }]`. The program week counts finished sessions (`sessionsDone`).
 
 Friends error codes: `INVITE_INVALID`, `REMOVED_FROM_GROUP`, `GROUP_FULL` (50 members),
 `GROUP_LIMIT` (10 groups), `NOT_OWNER`, `CHALLENGE_LIMIT` (5 running), `NOT_FINISHED`,

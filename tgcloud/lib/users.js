@@ -126,7 +126,7 @@ export async function setBotState(userId, state) {
 
 // Every table that holds per-user rows. Children first — there are no cascades.
 const USER_TABLES = [
-  T.activityReactions, T.activities, T.userAchievements, T.programEnrollments,
+  T.activityReactions, T.activities, T.userAchievements, T.programLifts, T.programEnrollments,
   T.personalRecords, T.sets, T.workoutExercises, T.workouts,
   T.schedule, T.routineExercises, T.routines,
   T.foodLogs, T.waterLogs, T.favoriteFoods, T.recipeItems,

@@ -509,27 +509,45 @@ console.log('Programs');
 {
   const PU = 551;
   await onboard(PU);
-  const PE = T.programEnrollments;
+  const PE = T.programEnrollments, PL = T.programLifts;
+  const lift = (uid, name) => db.select().from(PL).where(and(eq(PL.userId, uid), eq(PL.exerciseId, exId(name)))).orderBy(PL.id).all().then((r) => r[r.length - 1]);
+  const setPE = (uid, patch) => db.update(PE).set(patch).where(and(eq(PE.userId, uid), isNull(PE.endedAt))).run();
+  // Starts a program routine, logs every planned set (fn(exercise, set) → patch; default: as planned) and finishes.
+  const session = async (uid, routineId, fn = () => ({})) => {
+    const w = await call(uid, 'startWorkout', { routineId });
+    for (const e of w.exercises) for (const x of e.sets) await call(uid, 'updateSet', { id: x.id, weightKg: x.weightKg ?? 20, reps: x.reps ?? 10, ...fn(e, x), completed: true });
+    return { start: w, finish: await call(uid, 'finishWorkout', { id: w.workout.id }) };
+  };
+
   const lp = await call(PU, 'listPrograms');
   assert.deepEqual(lp.programs.map((p) => p.code), ['full_body_beginner', 'ppl_12', 'wendler_531']); assert.equal(lp.activeCode, null);
   assert.deepEqual(lp.suggestedMaxes, { ohp: null, deadlift: null, bench: null, squat: null }); ok('three programs; no history → no suggested maxes');
   let my = await call(PU, 'enrollProgram', { code: 'wendler_531', oneRepMaxes: { bench: 111, squat: 160, deadlift: 200, ohp: 70 } });
   assert.equal(my.program.code, 'wendler_531'); assert.deepEqual(my.enrollment.trainingMaxes, { ohp: 62.5, deadlift: 180, bench: 100, squat: 145 });
-  assert.equal(my.routines.length, 4); assert.equal(my.week, 1); ok('enrol in 5/3/1: training maxes from the 1RMs, four routines');
+  assert.equal(my.routines.length, 4); assert.equal(my.week, 1); assert.equal(my.sessionsDone, 0); ok('enrol in 5/3/1: training maxes from the 1RMs, four routines');
   const sched = (await call(PU, 'listRoutines')).week;
   const byDay = Object.fromEntries(sched.map((d) => [d.weekday, d.routineId]));
   assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map((d) => !!byDay[d]), [true, true, false, true, true, false, false]); ok('schedule replaced with the program\'s week');
   await fails(call(PU, 'enrollProgram', { code: 'ppl_12' }), 'PROGRAM_ACTIVE'); ok('one program at a time');
 
-  await db.update(PE).set({ startDate: addDays(TODAY, -7) }).where(eq(PE.userId, PU)).run();   // now in week 2
+  await setPE(PU, { weekOffset: 1 });   // as if week 1 were done
   const benchDay = my.routines.find((r) => r.day === 2);
   let pw = await call(PU, 'startWorkout', { routineId: benchDay.id });
   assert.deepEqual(pw.exercises[0].sets.map((x) => [x.weightKg, x.reps]), [[70, 3], [80, 3], [90, 3]]);
   assert.deepEqual(pw.exercises[1].sets.map((x) => [x.weightKg, x.reps]), Array(5).fill([null, 10])); ok('week 2 bench day: 70/80/90 × 3, then 5 × 10 rows — not the routine targets');
   assert.equal(pw.exercises[0].target, null); ok('program workouts show no uniform routine target');
-  for (const e of pw.exercises) for (const x of e.sets) await call(PU, 'updateSet', { id: x.id, weightKg: x.weightKg ?? 30, reps: x.reps, completed: true });
-  const pf = await call(PU, 'finishWorkout', { id: pw.workout.id });
-  assert.deepEqual(pf.progression, []); ok('progression rules leave program routines alone');
+  assert.equal(pw.exercises[0].program.calibrate, false); assert.equal(pw.exercises[1].program.calibrate, true); assert.equal(pw.exercises[1].program.guess, false); ok('typed max → no calibration; dumbbell row with no history → calibrate, no guess');
+  for (const e of pw.exercises) for (const x of e.sets) await call(PU, 'updateSet', { id: x.id, weightKg: x.weightKg ?? 30, reps: x.reps, rir: e === pw.exercises[1] ? 2 : null, completed: true });
+  let pf = await call(PU, 'finishWorkout', { id: pw.workout.id });
+  assert.deepEqual(pf.progression, []); ok('routine progression rules leave program routines alone');
+  assert.deepEqual(pf.programChanges.map((c) => [c.exerciseName, c.kind, c.toKg]), [['Dumbbell Row', 'calibrated', 30]]); ok('calibrated from 30 × 10 with 2 left → 30 kg');
+  assert.equal((await call(PU, 'getMyProgram')).sessionsDone, 1);
+
+  await setPE(PU, { weekOffset: 4 });   // into wave 2
+  pw = await call(PU, 'startWorkout', { routineId: benchDay.id });
+  assert.deepEqual(pw.exercises[0].sets.map((x) => x.weightKg), [67.5, 77.5, 87.5]); assert.equal(pw.exercises[0].program.change.kind, 'up');
+  assert.deepEqual(pw.exercises[1].sets.map((x) => x.weightKg), Array(5).fill(30)); ok('wave 2: training max +2.5 kg (with the reason); dumbbell row at its calibrated 30 kg');
+  await call(PU, 'discardWorkout', { id: pw.workout.id });
 
   await call(PU, 'leaveProgram');
   assert.equal(await db.$count(T.routines, and(eq(T.routines.userId, PU), isNull(T.routines.archivedAt))), 0);
@@ -537,106 +555,60 @@ console.log('Programs');
   assert.equal(await db.$count(T.workouts, eq(T.workouts.userId, PU)), 1);
   assert.equal((await call(PU, 'getMyProgram')).program, null); ok('leave: routines archived, schedule cleared, workouts kept');
   pw = await call(PU, 'startWorkout', { routineId: benchDay.id });
-  assert.deepEqual(pw.exercises[0].sets.map((x) => x.weightKg), [70, 80, 90]); ok('a routine from an ended program starts like any routine (copies last session)');
+  assert.deepEqual(pw.exercises[0].sets.map((x) => x.weightKg), [70, 80, 90]); assert.equal(pw.exercises[0].program, undefined); ok('a routine from an ended program starts like any routine (copies last session)');
   await call(PU, 'discardWorkout', { id: pw.workout.id });
   assert.ok((await call(PU, 'listPrograms')).suggestedMaxes.bench > 0); ok('history → suggested 1RM for the next enrolment');
 
+  // Enrolled before weeks counted sessions: keeps its calendar week; lifts start from history.
   my = await call(PU, 'enrollProgram', { code: 'ppl_12' });
-  await db.update(PE).set({ startDate: addDays(TODAY, -21) }).where(and(eq(PE.userId, PU), eq(PE.programCode, 'ppl_12'))).run();
-  my = await call(PU, 'getMyProgram'); assert.equal(my.week, 4); assert.equal(my.deload, true);
+  await setPE(PU, { weekOffset: null, startDate: addDays(TODAY, -21) });
+  my = await call(PU, 'getMyProgram'); assert.equal(my.week, 4); assert.equal(my.deload, true); ok('older enrolment keeps the calendar week it reached (week 4)');
   pw = await call(PU, 'startWorkout', { routineId: my.routines.find((r) => r.day === 0).id });
-  assert.equal(pw.exercises[0].sets.length, 2); assert.equal(pw.exercises[0].sets[0].weightKg, 90); ok('PPL week 4: deload sets at last session\'s weight');
+  assert.equal(pw.exercises[0].sets.length, 2); assert.equal(pw.exercises[0].sets[0].weightKg, 77.5); ok('PPL week 4 deload; bench from the 90-day e1RM (90 × 3 → 77.5 kg for 6 reps)');
   await call(PU, 'discardWorkout', { id: pw.workout.id });
   await call(PU, 'leaveProgram');
 
-  my = await call(PU, 'enrollProgram', { code: 'full_body_beginner' });
-  await db.update(PE).set({ startDate: addDays(TODAY, -56) }).where(and(eq(PE.userId, PU), isNull(PE.endedAt))).run();   // past its 8 weeks
-  my = await call(PU, 'getMyProgram');
+  // A new lifter: guess → calibrate → progress → stall → reset; weeks by sessions; break; end.
+  const NU = 552;
+  await onboard(NU);
+  my = await call(NU, 'enrollProgram', { code: 'full_body_beginner' });
+  const A = my.routines.find((r) => r.day === 0).id, B = my.routines.find((r) => r.day === 1).id;
+  let s = await session(NU, A, (e, x) => (e.exercise.name === 'Back Squat' ? { weightKg: 70, reps: 5, rir: x.position === 2 ? 2 : null } : {}));
+  const sq = s.start.exercises[0];
+  assert.deepEqual(sq.sets.map((x) => [x.weightKg, x.reps]), Array(3).fill([40, 5])); assert.deepEqual([sq.program.calibrate, sq.program.guess], [true, true]); ok('no history: squat starts from a guess (80 kg man → 40 kg) and asks to calibrate');
+  assert.equal(s.finish.programChanges.find((c) => c.exerciseName === 'Back Squat').toKg, 70); ok('calibration: 70 × 5 with 2 left → 70 kg');
+  s = await session(NU, B);
+  assert.deepEqual(s.start.exercises[0].sets.map((x) => x.weightKg), [70, 70, 70]); assert.equal(s.start.exercises[0].program.change.kind, 'calibrated'); assert.equal(s.start.exercises[0].program.calibrate, false); ok('next session: 70 × 5 × 3, “set from your first session”');
+  assert.equal((await lift(NU, 'Back Squat')).workingKg, 75); ok('all reps → +5 kg');
+  s = await session(NU, A);
+  my = await call(NU, 'getMyProgram'); assert.deepEqual([my.week, my.sessionsDone, my.sessionsThisWeek], [2, 3, 0]); ok('three sessions → week 2, whatever the calendar says');
+  await db.update(PL).set({ workingKg: 100, misses: 0 }).where(and(eq(PL.userId, NU), eq(PL.exerciseId, exId('Back Squat')))).run();
+  for (let i = 0; i < 3; i++) s = await session(NU, B, (e, x) => (e.exercise.name === 'Back Squat' && x.position === 2 ? { reps: 3 } : {}));
+  const reset = s.finish.programChanges.find((c) => c.exerciseName === 'Back Squat');
+  assert.deepEqual([reset.kind, reset.fromKg, reset.toKg], ['reset', 100, 90]); ok('three missed sessions in a row → 90%');
+  s = await session(NU, A, (e, x) => (e.exercise.name === 'Back Squat' && x.position === 2 ? { rir: 0 } : {}));
+  assert.equal(s.finish.programChanges.find((c) => c.exerciseName === 'Back Squat').kind, 'hold'); assert.equal((await lift(NU, 'Back Squat')).workingKg, 90); ok('all reps but the last set all-out → same weight');
+
+  await db.update(T.workouts).set({ localDate: addDays(TODAY, -15) }).where(eq(T.workouts.userId, NU)).run();
+  pw = await call(NU, 'startWorkout', { routineId: A });
+  assert.deepEqual(pw.exercises[0].sets.map((x) => x.weightKg), [80, 80, 80]); assert.equal(pw.exercises[0].program.change.kind, 'break');   // 90 × 0.9 = 81 → 80
+  await call(NU, 'discardWorkout', { id: pw.workout.id });
+  pw = await call(NU, 'startWorkout', { routineId: A });
+  assert.equal(pw.exercises[0].sets[0].weightKg, 80); ok('back after 15 days: 10% lighter, once');
+  await call(NU, 'discardWorkout', { id: pw.workout.id });
+
+  await setPE(NU, { weekOffset: 8 });
+  my = await call(NU, 'getMyProgram');
   assert.equal(my.program, null); assert.equal(my.lastEnded.code, 'full_body_beginner');
-  assert.ok((await call(PU, 'listRoutines')).week.every((d) => !d.routineId)); ok('a finished 8-week program ends itself, with the same cleanup');
-  await fails(call(PU, 'leaveProgram'), 'NOT_FOUND'); ok('nothing to leave → NOT_FOUND');
-  await fails(call(PU, 'enrollProgram', { code: 'nope' }), 'INVALID_INPUT'); ok('unknown program → INVALID_INPUT');
+  assert.ok((await call(NU, 'listRoutines')).week.every((d) => !d.routineId)); ok('a finished 8-week program ends itself, with the same cleanup');
+  await call(NU, 'enrollProgram', { code: 'full_body_beginner' });
+  await setPE(NU, { startDate: addDays(TODAY, -40) });
+  await db.update(T.workouts).set({ localDate: addDays(TODAY, -30) }).where(eq(T.workouts.userId, NU)).run();
+  assert.equal((await call(NU, 'getMyProgram')).program, null); ok('28 days without a session → the program ends');
+  await fails(call(NU, 'leaveProgram'), 'NOT_FOUND'); ok('nothing to leave → NOT_FOUND');
+  await fails(call(NU, 'enrollProgram', { code: 'nope' }), 'INVALID_INPUT'); ok('unknown program → INVALID_INPUT');
 }
 
-console.log('Group chats');
-{
-  const onMember = (await import('../tgcloud/handlers/my_chat_member.js')).default;
-  const { processGroupChatPosts } = await import('../tgcloud/lib/bot/group-chat.js');
-  const [OW, NOPE, TAP] = [561, 562, 564];
-  for (const uid of [OW, TAP]) await onboard(uid);
-  await sayAs(OW, '/start');   // the owner has a private chat with the bot
-  const prevApi = { ...globalThis.fakeApi };
-  const admins = new Set([`-1001:${OW}`, `-1003:${OW}`]);
-  globalThis.fakeApi.getChatMember = ({ chat_id, user_id }) => ({ status: admins.has(`${chat_id}:${user_id}`) ? 'administrator' : 'member' });
-  const tgUser = (id) => ({ id, first_name: NAMES[id] || `U${id}`, language_code: 'en' });
-  const chat = (id) => ({ id, type: 'supergroup', title: `Chat ${id}` });
-  const added = (chatId, by) => onMember({ chat: chat(chatId), from: tgUser(by), date: 0, old_chat_member: { status: 'left' }, new_chat_member: { status: 'member' } });
-  const removed = (chatId, by) => onMember({ chat: chat(chatId), from: tgUser(by), date: 0, old_chat_member: { status: 'member' }, new_chat_member: { status: 'left' } });
-  const linkedTo = (chatId) => db.select().from(T.groups).where(eq(T.groups.chatId, chatId)).get();
-  const posted = () => globalThis.apiCalls.filter((c) => c[0] === 'sendMessage').map((c) => c[1]);
-  const groupSay = (chatId, uid, text, extra = {}) => onMessage({ message_id: 9, from: tgUser(uid), chat: chat(chatId), text, ...extra });
-  const groupTap = (chatId, uid, data) => onCallback({ id: `cb${uid}`, from: tgUser(uid), data, message: { message_id: 9, chat: chat(chatId) } });
-  const answered = () => globalThis.apiCalls.filter((c) => c[0] === 'answerCallbackQuery').at(-1)[1];
-
-  globalThis.apiCalls = []; await added(-1001, OW);
-  const linked = await linkedTo(-1001);
-  assert.ok(linked); assert.equal(linked.ownerId, OW); assert.equal(linked.name, 'Chat -1001'); assert.ok(linked.nextPostAt > new Date());
-  const joinMsg = posted()[0];
-  assert.match(joinMsg.text, /This chat now has a FitPro group/); assert.equal(joinMsg.reply_markup.inline_keyboard[0][0].callback_data, `g:join:${linked.inviteCode}`); ok('bot added by a set-up admin → linked group + Join button');
-  admins.add(`-1001:${TAP}`);
-  globalThis.apiCalls = []; await added(-1001, TAP);
-  assert.equal(await db.$count(T.groups, eq(T.groups.chatId, -1001)), 1); assert.equal((await linkedTo(-1001)).ownerId, OW); ok('re-added by another admin → same group, same owner');
-  globalThis.apiCalls = []; await added(-1002, OW);
-  assert.ok(!(await linkedTo(-1002))); assert.match(posted()[0].text, /a chat admin who uses FitPro/); assert.ok(posted()[0].reply_markup.inline_keyboard[0][0].url); ok('adder not a chat admin → no group, setup message with a link button');
-  globalThis.apiCalls = []; await added(-1003, NOPE);
-  assert.ok(!(await linkedTo(-1003))); ok('adder without FitPro → no group');
-  const extra = [];
-  for (let i = 0; i < 9; i++) extra.push((await call(OW, 'createGroup', { name: `Cap ${i}` })).group.id);
-  admins.add(`-1004:${OW}`);
-  globalThis.apiCalls = []; await added(-1004, OW);
-  assert.ok(!(await linkedTo(-1004))); assert.match(posted()[0].text, /a chat admin who uses FitPro/); ok('adder already in 10 groups → no group');
-  for (const id of extra) await call(OW, 'leaveGroup', { groupId: id });
-  assert.ok(posted().every((m) => (m.reply_markup?.inline_keyboard || []).flat().every((b) => !b.web_app))); ok('no web_app buttons in group chats');
-
-  globalThis.apiCalls = []; await groupTap(-1001, TAP, `g:join:${linked.inviteCode}`);
-  assert.match(answered().url, new RegExp(`start=g_${linked.inviteCode}$`));
-  assert.equal(await db.$count(T.groupMembers, and(eq(T.groupMembers.groupId, linked.id), eq(T.groupMembers.userId, TAP))), 0); ok('Join without a private chat with the bot → link to start it, no membership');
-  await sayAs(TAP, '/start');
-  globalThis.apiCalls = []; await groupTap(-1001, TAP, `g:join:${linked.inviteCode}`);
-  assert.match(answered().text, /You joined Chat -1001/);
-  assert.ok(!globalThis.apiCalls.some((c) => c[0] === 'sendMessage')); ok('after /start: Join adds them, answered in place (nothing posted)');
-
-  await doWorkout(TAP, [['Barbell Bench Press', 60, 5, 2]]);
-  globalThis.apiCalls = []; await groupSay(-1001, TAP, '/leaderboard');
-  assert.match(posted()[0].text, /Nobody is shown here yet/); ok('/leaderboard lists nobody until members opt in');
-  await call(TAP, 'updateMembership', { groupId: linked.id, showInChat: true });
-  globalThis.apiCalls = []; await groupSay(-1001, OW, '/leaderboard@fitpro_bot');
-  const board = posted()[0];
-  assert.equal(board.text, '📊 <b>Chat -1001</b> — this week\n1. User — 1/4');   // only the opted-in member
-  assert.match(board.reply_markup.inline_keyboard[0][0].url, /startapp=g_/); ok('/leaderboard@bot: only opted-in members, link button into the app');
-  globalThis.apiCalls = []; await groupSay(-1002, OW, '/leaderboard'); assert.match(posted()[0].text, /a chat admin who uses FitPro/); ok('/leaderboard in an unlinked chat explains the setup');
-  globalThis.apiCalls = []; await groupSay(-1001, OW, 'hello everyone'); assert.equal(globalThis.apiCalls.length, 0); ok('other group messages are ignored');
-  const tapGetGroup = await call(TAP, 'getGroup', { groupId: linked.id });
-  assert.equal(tapGetGroup.group.chatLinked, true); assert.equal(tapGetGroup.me.showInChat, true); ok('the app knows the group is linked');
-
-  await groupSay(-1001, OW, '', { migrate_to_chat_id: -1009 });
-  assert.equal((await db.select().from(T.groups).where(eq(T.groups.id, linked.id)).get()).chatId, -1009); ok('chat upgraded to a supergroup → link follows the new id');
-  await db.update(T.groups).set({ nextPostAt: new Date(Date.now() - 1000) }).where(eq(T.groups.id, linked.id)).run();
-  globalThis.apiCalls = []; let pp = await processGroupChatPosts();
-  assert.equal(pp.sent, 1); assert.equal(posted()[0].chat_id, -1009); assert.match(posted()[0].text, /this week/);
-  assert.ok((await db.select().from(T.groups).where(eq(T.groups.id, linked.id)).get()).nextPostAt > new Date());
-  globalThis.apiCalls = []; pp = await processGroupChatPosts(); assert.equal(pp.sent, 0); ok('weekly post goes out once, then rescheduled to next Monday');
-  await db.update(T.groups).set({ nextPostAt: new Date(Date.now() - 1000) }).where(eq(T.groups.id, linked.id)).run();
-  globalThis.fakeApi.sendMessage = () => { throw new BotApiError(403, 'Forbidden: bot was kicked from the supergroup chat'); };
-  pp = await processGroupChatPosts(); globalThis.fakeApi = { ...prevApi, getChatMember: globalThis.fakeApi.getChatMember };
-  assert.equal(pp.unlinked, 1); assert.equal((await db.select().from(T.groups).where(eq(T.groups.id, linked.id)).get()).chatId, null); ok('a chat the bot was kicked from gets unlinked');
-
-  await db.update(T.groups).set({ chatId: -1001 }).where(eq(T.groups.id, linked.id)).run();
-  await removed(-1001, OW);
-  const after = await db.select().from(T.groups).where(eq(T.groups.id, linked.id)).get();
-  assert.equal(after.chatId, null); assert.equal(await db.$count(T.groupMembers, eq(T.groupMembers.groupId, linked.id)), 2); ok('bot removed → chat unlinked, group and members kept');
-  globalThis.fakeApi = prevApi;
-}
 
 console.log('Friends: delete my data');
 {
@@ -655,7 +627,7 @@ console.log('Friends: delete my data');
   assert.equal(tmpNow.ownerId, EVE);
   assert.equal((await db.select().from(T.groupMembers).where(and(eq(T.groupMembers.groupId, tmp.id), eq(T.groupMembers.userId, EVE))).get()).role, 'owner'); ok('owner deletes their data → the other member owns the group');
   const left = [];
-  for (const [name, tbl] of Object.entries({ groupMembers: T.groupMembers, groupBlocks: T.groupBlocks, activities: T.activities, activityReactions: T.activityReactions, userAchievements: T.userAchievements, programEnrollments: T.programEnrollments })) {
+  for (const [name, tbl] of Object.entries({ groupMembers: T.groupMembers, groupBlocks: T.groupBlocks, activities: T.activities, activityReactions: T.activityReactions, userAchievements: T.userAchievements, programEnrollments: T.programEnrollments, programLifts: T.programLifts })) {
     if (await db.$count(tbl, eq(tbl.userId, DAN))) left.push(name);
   }
   if (await db.$count(T.groups, eq(T.groups.ownerId, DAN))) left.push('groups');
@@ -673,12 +645,12 @@ console.log('Friends: translations');
   const common = await Promise.all(['../tgcloud/lib/i18n/shared.js', '../tgcloud/lib/i18n/friends.js'].map(load));
   const BOT_DICT = mergeDicts(...common, await load('../tgcloud/lib/i18n/bot.js'));
   const APP_DICT = mergeDicts(...common, ...await Promise.all(['common', 'account', 'workout', 'food', 'progress', 'guides', 'social'].map((f) => load(`../src/i18n/${f}.js`))));
-  const BOT_FILES = ['tgcloud/lib/bot/friends.js', 'tgcloud/lib/notify.js', 'tgcloud/lib/share.js', 'tgcloud/lib/bot/workout.js', 'tgcloud/lib/challenges.js', 'tgcloud/lib/data/achievements.js', 'tgcloud/lib/export.js', 'tgcloud/lib/bot/group-chat.js'];
+  const BOT_FILES = ['tgcloud/lib/bot/friends.js', 'tgcloud/lib/notify.js', 'tgcloud/lib/share.js', 'tgcloud/lib/bot/workout.js', 'tgcloud/lib/data/programs.js', 'tgcloud/lib/challenges.js', 'tgcloud/lib/data/achievements.js', 'tgcloud/lib/export.js', 'tgcloud/lib/bot/group-chat.js'];
   const APP_FILES = [
     'src/screens/Friends.jsx', 'src/screens/Group.jsx', 'src/screens/GroupSettings.jsx', 'src/screens/GroupInvite.jsx', 'src/screens/MemberRoutines.jsx',
     'src/lib/share-card.js', 'src/ui/ShareButton.jsx', 'src/screens/Progress.jsx', 'src/screens/WorkoutSummary.jsx', 'src/ui/Challenges.jsx', 'src/screens/Settings.jsx',
     'src/screens/Programs.jsx', 'src/screens/Train.jsx', 'src/screens/Home.jsx',
-    'tgcloud/lib/data/achievements.js',
+    'tgcloud/lib/data/achievements.js', 'tgcloud/lib/data/programs.js', 'src/screens/Workout.jsx',
   ];
   // Server errors from the friends modules are shown by both, so they must be shared.
   const ERROR_FILES = ['tgcloud/lib/groups.js', 'tgcloud/lib/activity.js', 'tgcloud/lib/challenges.js', 'tgcloud/lib/share.js', 'tgcloud/lib/own-chat.js', 'tgcloud/lib/export.js', 'tgcloud/lib/programs.js'];

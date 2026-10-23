@@ -13,6 +13,7 @@ import { exerciseGuide } from '../lib/exercise-guides.js';
 import { Icon } from '../ui/icons.jsx';
 import { haptic, confirmDialog } from '../lib/tg.js';
 import { blocks, nextOpenSet } from '../../tgcloud/lib/supersets.js';
+import { describeChange } from '../../tgcloud/lib/data/programs.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const clock = (sec) => {
@@ -62,6 +63,20 @@ function previousText(p, fmt, track) {
 }
 
 const WEIGHTED = ['weight_reps', 'weighted_bodyweight'];
+const RIR = [[0, '0'], [1, '1'], [2, '2'], [3, '3+']];
+
+// After a program set: how many more reps it had in it. Calibration and the next
+// weight use it; skipping it is fine.
+function RepsLeft({ set, onPick }) {
+  return (
+    <div className="rir-row" role="group" aria-label={t('Reps left in the tank')}>
+      <span>{t('Reps left in the tank')}</span>
+      {RIR.map(([n, label]) => (
+        <button key={n} type="button" className="chip" aria-pressed={set.rir === n} onClick={() => { haptic.select(); onPick(set.rir === n ? null : n); }}>{label}</button>
+      ))}
+    </div>
+  );
+}
 
 // A drop set's weight: about 20% lighter, on the plate step, never below one step.
 function dropWeightKg(kg, fmt) {
@@ -279,6 +294,7 @@ export default function Workout({ id }) {
                 const working = e.previous.filter((p) => p.setType !== 'warmup');
                 const weighted = WEIGHTED.includes(e.exercise.trackType);
                 const dropBase = [...e.sets].reverse().find((s) => s.completed) || e.sets[e.sets.length - 1];
+                const lastWorking = [...e.sets].reverse().find((s) => s.setType !== 'warmup');
                 let n = 0;
                 return (
                   <div key={e.id} className="ex-card">
@@ -293,6 +309,13 @@ export default function Workout({ id }) {
                       {e.bestWeightKg && <span className="badge gold"><Icon name="trophy" size={13} stroke={2.4} />PR {fmt.w(e.bestWeightKg)}</span>}
                       <button type="button" className="icon-btn" style={{ width: 32, height: 32, background: 'transparent' }} aria-label={t('{name} options', { name: cname(e.exercise.name) })} onClick={() => setExMenu(e)}><Icon name="more" size={20} stroke={3} /></button>
                     </div>
+                    {e.program && (e.program.calibrate || e.program.change) && (
+                      <div className={`ex-note${e.program.calibrate ? ' calibrate' : ''}`}>
+                        {e.program.calibrate
+                          ? `${e.program.guess ? `${t('The weight is a starting guess.')} ` : ''}${t('Find your weight: work up until a set leaves about 2 reps in the tank, then say how many were left.')}`
+                          : describeChange(e.program.change, t, (kg) => fmt.w(kg))}
+                      </div>
+                    )}
                     <div className={`set-grid set-head${e.exercise.trackType === 'weight_reps' || e.exercise.trackType === 'weighted_bodyweight' ? '' : e.exercise.trackType === 'distance_duration' ? ' time-dist' : ' no-weight'}`}>
                       <span>{t('Set@col')}</span><span>{t('Previous')}</span>
                       {(e.exercise.trackType === 'weight_reps' || e.exercise.trackType === 'weighted_bodyweight') && <span className="center">{e.exercise.trackType === 'weighted_bodyweight' ? `+${fmt.weightLabel}` : fmt.weightLabel}</span>}
@@ -302,9 +325,13 @@ export default function Workout({ id }) {
                     {e.sets.map((s, i) => {
                       if (s.setType !== 'warmup') n += 1;
                       const prev = s.setType === 'warmup' ? e.previous.find((p) => p.setType === 'warmup') : working[n - 1];
+                      const askRir = open && e.program && weighted && s.completed && s.setType !== 'warmup' && (e.program.calibrate || s === lastWorking);
                       return (
-                        <SetRow key={s.id} set={s} number={n} current={s.id === firstOpen} track={e.exercise.trackType} fmt={fmt} prev={prev}
-                          onChange={(patch) => changeSet(e, s, patch)} onMenu={() => setSetMenu({ set: s, ex: e })} onDelete={() => run('deleteSet', { id: s.id })} />
+                        <div key={s.id}>
+                          <SetRow set={s} number={n} current={s.id === firstOpen} track={e.exercise.trackType} fmt={fmt} prev={prev}
+                            onChange={(patch) => changeSet(e, s, patch)} onMenu={() => setSetMenu({ set: s, ex: e })} onDelete={() => run('deleteSet', { id: s.id })} />
+                          {askRir && <RepsLeft set={s} onPick={(rir) => changeSet(e, s, { rir })} />}
+                        </div>
                       );
                     })}
                     <div className="add-set-row">

@@ -101,6 +101,8 @@ export default {
     'Your one-rep max ({unit})': 'Твой разовый максимум ({unit})',
     'Filled in from your recent sets. Training weights use 90% of it.': 'Заполнено по твоим недавним подходам. Рабочие веса считаются от 90% этого числа.',
     'Start program': 'Начать план',
+    '{done} of {n} sessions done': ['{done} из {n} тренировки', '{done} из {n} тренировок', '{done} из {n} тренировок'],
+    'Each workout is pre-filled with that week’s sets and weights. A week moves on once its sessions are done, and weights follow how your sets go.': 'Каждая тренировка заполняется подходами и весами на эту неделю. Неделя засчитывается, когда сделаны все её тренировки, а веса подстраиваются под твои подходы.',
 
     // Export
     'Your data': 'Твои данные',
@@ -219,6 +221,8 @@ export default {
     'Your one-rep max ({unit})': 'Bir martalik maksimumingiz ({unit})',
     'Filled in from your recent sets. Training weights use 90% of it.': 'So‘nggi podxodlaringiz asosida to‘ldirildi. Ish og‘irliklari uning 90% idan hisoblanadi.',
     'Start program': 'Rejani boshlash',
+    '{done} of {n} sessions done': '{n} tadan {done} ta mashg‘ulot',
+    'Each workout is pre-filled with that week’s sets and weights. A week moves on once its sessions are done, and weights follow how your sets go.': 'Har bir mashg‘ulot o‘sha haftaning podxodlari va og‘irliklari bilan to‘ldiriladi. Hafta uning barcha mashg‘ulotlari bajarilgach o‘tadi, og‘irliklar esa podxodlaringizga moslashadi.',
 
     'Your data': 'Ma’lumotlaringiz',
     'The bot sends you CSV files — workouts, food, weight and measurements. Once an hour.': 'Bot sizga CSV fayllarni yuboradi — mashg‘ulotlar, ovqat, vazn va o‘lchovlar. Soatiga bir marta.',

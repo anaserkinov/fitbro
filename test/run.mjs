@@ -30,24 +30,58 @@ assert.equal(nutrition.computeTargets({ sex: 'male' }, '2026-10-22'), null); ok(
 
 console.log('Programs (math)');
 {
-  const { PROGRAM_BY_CODE, trainingMax, weekInfo, roundTo } = await import('../tgcloud/lib/data/programs.js');
+  const { PROGRAM_BY_CODE, trainingMax, weekInfo, roundTo, roundDown, guessKg, e1rmWithRir, fromOneRepMax } = await import('../tgcloud/lib/data/programs.js');
   const w531 = PROGRAM_BY_CODE.wendler_531, ppl = PROGRAM_BY_CODE.ppl_12, fb = PROGRAM_BY_CODE.full_body_beginner;
   const benchMain = w531.days[2].exercises[0];
-  const at = (prog, ex, weekIndex, previous = [], trainingMaxes = null) => prog.prescribe(ex, { previous, weekIndex, trainingMaxes }).map((s) => [s.weightKg, s.reps]);
-  assert.deepEqual(at(w531, benchMain, 1, [], { bench: 100 }), [[70, 3], [80, 3], [90, 3]]); ok('5/3/1 week 2, TM 100 → 70/80/90 × 3');
-  assert.deepEqual(at(w531, benchMain, 4, [], { bench: 100 }), [[67.5, 5], [77.5, 5], [87.5, 5]]); ok('next wave: TM +2.5 kg, rounded to 2.5');
-  assert.deepEqual(at(w531, benchMain, 3, [], { bench: 100 }), [[40, 5], [50, 5], [60, 5]]); ok('5/3/1 week 4 is the deload');
-  assert.deepEqual(at(w531, benchMain, 0), [[null, 5], [null, 5], [null, 5]]); ok('no training max → reps only');
-  assert.equal(trainingMax(111), 100); assert.equal(roundTo(66.6), 67.5); ok('training max = 90% of 1RM, plate-rounded');
+  const st = (workingKg, extra = {}) => ({ workingKg, reps: null, misses: 0, cycle: 0, source: 'history', ...extra });
+  const at = (prog, ex, weekIndex, state) => prog.prescribe(ex, { state, weekIndex }).map((s) => [s.weightKg, s.reps]);
+  const done = (kg, reps, extra = {}) => reps.map((r) => ({ weightKg: kg, reps: r, ...extra }));
+  const adv = (prog, ex, state, sets, weekIndex = 0) => prog.advance(ex, state, sets, { weekIndex });
+
+  assert.deepEqual(at(w531, benchMain, 1, st(100)), [[70, 3], [80, 3], [90, 3]]); ok('5/3/1 week 2, TM 100 → 70/80/90 × 3');
+  assert.deepEqual(at(w531, benchMain, 3, st(100)), [[40, 5], [50, 5], [60, 5]]); ok('5/3/1 week 4 is the deload');
+  assert.deepEqual(at(w531, benchMain, 0, null), [[null, 5], [null, 5], [null, 5]]); ok('no state → reps only');
+  assert.equal(trainingMax(111), 100); assert.equal(roundTo(66.6), 67.5); assert.equal(roundDown(36), 35); ok('training max = 90% of 1RM; plate rounding');
+  let r = w531.roll(benchMain, st(100), 4);
+  assert.deepEqual([r.workingKg, r.cycle, r.change.kind], [102.5, 1, 'up']); ok('new wave: TM +2.5 kg');
+  assert.equal(w531.roll(benchMain, st(100, { cycle: 1 }), 5), null); ok('same wave → no roll');
+  const wave1 = (last) => [{ weightKg: 65, reps: 5 }, { weightKg: 75, reps: 5 }, { weightKg: 85, reps: last }];
+  assert.equal(adv(w531, benchMain, st(100), wave1(3), 0).misses, 1);
+  assert.equal(adv(w531, benchMain, st(100), wave1(7), 0), null);
+  r = w531.roll(benchMain, st(100, { misses: 1 }), 4);
+  assert.deepEqual([r.workingKg, r.misses, r.change.kind], [90, 0, 'reset']); ok('a short AMRAP → next wave starts from 90% of the TM');
+
   const pplBench = ppl.days[0].exercises[0];
-  const four = (kg, reps) => reps.map((r) => ({ weightKg: kg, reps: r }));
-  assert.deepEqual(at(ppl, pplBench, 0, four(80, [8, 8, 8, 8])), [[82.5, 6], [82.5, 6], [82.5, 6], [82.5, 6]]); ok('double progression: top of the range → +2.5 kg, back to 6 reps');
-  assert.deepEqual(at(ppl, pplBench, 0, four(80, [8, 8, 7, 8]))[0], [80, 8]); ok('not every set at the top → same weight, one more rep');
-  assert.deepEqual(at(ppl, pplBench, 3, four(80, [8, 8, 8, 8])), [[80, 6], [80, 6]]); ok('PPL week 4: deload — 60% of the sets, no added weight');
-  assert.equal(at(ppl, pplBench, 4, four(80, [6, 6, 6, 6])).length, 4); ok('week 5 back to full volume');
+  assert.deepEqual(at(ppl, pplBench, 0, st(80, { reps: 7 })), Array(4).fill([80, 7])); ok('PPL: sets at the working weight and rep target');
+  r = adv(ppl, pplBench, st(80, { reps: 8 }), done(80, [8, 8, 8, 8]));
+  assert.deepEqual([r.workingKg, r.reps, r.change.kind], [82.5, 6, 'up']); ok('double progression: top of the range → +2.5 kg, back to 6 reps');
+  r = adv(ppl, pplBench, st(80, { reps: 7 }), done(80, [8, 8, 7, 8]));
+  assert.deepEqual([r.workingKg, r.reps, r.change], [80, 8, null]); ok('target met but not every set at the top → same weight, one more rep');
+  r = adv(ppl, pplBench, st(80, { reps: 8 }), done(80, [8, 8, 8, 8]).map((x, i) => (i === 3 ? { ...x, rir: 0 } : x)));
+  assert.deepEqual([r.workingKg, r.change.kind], [80, 'hold']); ok('last set all-out (0 reps left) → hold');
+  assert.deepEqual(at(ppl, pplBench, 3, st(80, { reps: 8 })), [[80, 6], [80, 6]]); ok('PPL week 4: deload — 60% of the sets');
+  assert.equal(adv(ppl, pplBench, st(80, { reps: 8 }), done(80, [8, 8, 8, 8]), 3), null); ok('deload sessions never advance');
+  assert.equal(adv(ppl, pplBench, st(80, { reps: 6 }), done(70, [8, 8, 8, 8])), null); ok('went lighter than planned → no verdict');
+
   const squat = fb.days[0].exercises[0];
-  assert.deepEqual(at(fb, squat, 0, four(60, [5, 5, 5]))[0], [65, 5]);
-  assert.deepEqual(at(fb, squat, 0, four(60, [5, 5, 4]))[0], [60, 5]); ok('linear: all reps → +5 kg (lower body), a miss → same weight');
+  assert.equal(adv(fb, squat, st(60), done(60, [5, 5, 5])).workingKg, 65);
+  r = adv(fb, squat, st(60), done(60, [5, 5, 4]));
+  assert.deepEqual([r.workingKg, r.misses, r.change], [60, 1, null]); ok('linear: all reps → +5 kg (lower body), a miss → same weight, counted');
+  r = adv(fb, squat, st(40, { misses: 2 }), done(40, [5, 4, 3]));
+  assert.deepEqual([r.workingKg, r.misses, r.change.kind], [35, 0, 'reset']); ok('third miss in a row → 90%, rounded down (40 → 35)');
+  assert.equal(adv(fb, squat, st(60, { misses: 2 }), done(60, [5, 5, 5])).misses, 0); ok('a hit clears the misses');
+  assert.equal(adv(fb, squat, st(60), done(65, [5, 5, 5])).workingKg, 70); ok('heavier than planned with all reps → builds on that');
+
+  assert.equal(guessKg(squat, { sex: 'male', bodyKg: 80 }), 40); assert.equal(guessKg(squat, { sex: 'female', bodyKg: 60 }), 17.5);
+  assert.equal(guessKg(squat, { sex: 'male', bodyKg: null }), null); assert.equal(guessKg(ppl.days[0].exercises[3], { sex: 'male', bodyKg: 80 }), null); ok('starting guess: share of body weight; none for isolation or without a weigh-in');
+  assert.equal(Math.round(e1rmWithRir({ weightKg: 70, reps: 5, rir: 2 }) * 10) / 10, 86.3);
+  assert.equal(e1rmWithRir({ weightKg: 70, reps: 5 }), 84); assert.equal(e1rmWithRir({ weightKg: 70, reps: 5, rpe: 8 }), e1rmWithRir({ weightKg: 70, reps: 5, rir: 2 })); ok('e1RM from reps + reps left (default 1; RPE 8 = 2 left)');
+  r = adv(fb, squat, st(40, { source: 'guess' }), done(70, [5], { rir: 2 }));
+  assert.deepEqual([r.workingKg, r.source, r.change.kind], [70, 'calibrated', 'calibrated']);
+  assert.equal(adv(fb, squat, st(40, { source: 'guess' }), done(70, [5])).workingKg, 67.5); ok('calibration: 70 × 5 with 2 left → 70 kg; not said → 67.5 kg');
+  assert.equal(adv(fb, squat, st(40, { source: 'guess' }), []), null); ok('calibration with nothing done → still calibrating');
+  assert.equal(fromOneRepMax(benchMain, 111), 100); assert.equal(fromOneRepMax(pplBench, 100), 80); ok('from a 1RM: 5/3/1 training max, or 2-in-the-tank weight for the bottom of the range');
+
   assert.equal(weekInfo(fb, 7).finished, false); assert.equal(weekInfo(fb, 8).finished, true);
   assert.deepEqual(weekInfo(w531, 5), { week: 2, of: 4, cycle: 2, deload: false, finished: false }); ok('week info: fixed programs end, 5/3/1 cycles');
 }

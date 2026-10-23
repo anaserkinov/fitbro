@@ -280,6 +280,10 @@ textarea.input { height: auto; min-height: 80px; padding: 10px 12px; resize: ver
 .swipe .set-row.current { background: color-mix(in srgb, var(--accent) 6%, var(--card)); }
 .swipe-delete { position: absolute; top: 0; right: 0; bottom: 0; width: 88px; border: 0; background: var(--destructive); color: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
 .add-set-row { display: flex; gap: 8px; margin: 6px 16px 12px; }
+.ex-note { margin: 0 16px 8px; font-size: 14px; color: var(--hint); }
+.ex-note.calibrate { padding: 8px 12px; border-radius: 10px; background: var(--accent-soft); color: var(--text); }
+.rir-row { display: flex; align-items: center; gap: 6px; margin: 2px 16px 8px; font-size: 13px; color: var(--hint); }
+.rir-row .chip { height: 28px; padding: 0 10px; background: var(--field); font-size: 13px; }
 .add-set-row .add-set { margin: 0; flex: 1; width: auto; }
 .superset { display: flex; flex-direction: column; gap: 8px; padding-left: 10px; border-left: 3px solid var(--fat); border-radius: 2px; }
 .superset-head { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--fat); padding: 0 4px; }

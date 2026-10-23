@@ -64,9 +64,10 @@ function Current({ my }) {
       invalidate(...AFFECTS_PROGRAM);
     } catch (e) { toastError(e); }
   }
-  const progress = my.cycle
-    ? t('Wave {cycle} · week {week} of {of}', { cycle: my.cycle, week: my.week, of: my.of })
-    : t('Week {week} of {of}', { week: my.week, of: my.of });
+  const progress = [
+    my.cycle ? t('Wave {cycle} · week {week} of {of}', { cycle: my.cycle, week: my.week, of: my.of }) : t('Week {week} of {of}', { week: my.week, of: my.of }),
+    t.n(my.daysPerWeek, '{done} of {n} session done', '{done} of {n} sessions done', { done: my.sessionsThisWeek }),
+  ].join(' · ');
   return (
     <Section title={t('Your program')} footer={my.deload ? t('A lighter week — let your body catch up.') : null}>
       <List>
@@ -90,7 +91,7 @@ export default function Programs() {
       <Loader q={my}>{(m) => (m.program ? <Current my={m} /> : null)}</Loader>
       <Loader q={list}>
         {(l) => (
-          <Section title={t('Programs')} footer={t('Each workout is pre-filled with that week’s sets and weights.')}>
+          <Section title={t('Programs')} footer={t('Each workout is pre-filled with that week’s sets and weights. A week moves on once its sessions are done, and weights follow how your sets go.')}>
             <List>
               {l.programs.map((p) => (
                 <Row key={p.code} icon="dumbbell" iconColor="#E8890C" title={t(p.name)}

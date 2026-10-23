@@ -3,6 +3,7 @@ import { eq } from 'sdk/db';
 import * as T from '../../schema.js';
 import { getWorkout, getActiveWorkout, startWorkout, updateSet, deleteSet, finishWorkout } from '../workouts.js';
 import { ACHIEVEMENT_BY_CODE } from '../data/achievements.js';
+import { describeChange } from '../data/programs.js';
 import { listRoutines } from '../routines.js';
 import { setBotState } from '../users.js';
 import { describePr } from '../strength.js';
@@ -218,6 +219,10 @@ export async function onWorkoutButton(user, chatId, messageId, data) {
     const prs = r.prs.filter((p) => p.type !== 'reps_at_weight');
     if (prs.length) lines.push('', `🏆 <b>${t('New records')}</b>`, ...prs.map((p) => `• ${esc(catalogName(user.language, p.exerciseName))} — ${pr(p)}`));
     if (r.progression.length) lines.push('', `📈 ${t.n(r.progression.length, '{n} target went up for next time', '{n} targets went up for next time')}`);
+    if (r.programChanges.length) {
+      const w = (kg) => kgText(kg, user);
+      lines.push('', `📈 <b>${t('Next time')}</b>`, ...r.programChanges.map((c) => `• ${esc(catalogName(user.language, c.exerciseName))}: ${w(c.toKg)} — ${describeChange(c, t, w)}`));
+    }
     const badges = (r.achievements || []).map((a) => ACHIEVEMENT_BY_CODE[a.code]).filter(Boolean);
     if (badges.length) lines.push('', `🏅 <b>${t('Achievement unlocked')}</b>`, ...badges.map((a) => `${a.icon} ${t(a.title)}`));
     await edit(chatId, messageId, lines.join('\n'), { reply_markup: inline([[appButton(`📱 ${t('See in app')}`)]]) });

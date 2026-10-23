@@ -483,15 +483,37 @@ export const userAchievements = table('user_achievements', {
 
 // A user following a built-in multi-week program (lib/data/programs.js). Enrolling
 // creates ordinary routines (routines.program_enrollment_id) and a weekly schedule;
-// the week is counted from start_date. One active enrolment per user.
+// the program week counts finished sessions. One active enrolment per user.
 export const programEnrollments = table('program_enrollments', {
   id:            integer('id').primaryKey({ autoIncrement: true }),
   userId:        integer('user_id').notNull(),
   programCode:   text('program_code').notNull(),
   startDate:     text('start_date').notNull(),
   trainingMaxes: json('training_maxes'),                     // 5/3/1: { ohp, deadlift, bench, squat } in kg
+  weekOffset:    integer('week_offset'),                     // weeks done before weeks were counted by sessions; null = not yet set
+  breakDeloadDate: text('break_deload_date'),                // last 'welcome back' deload (local date)
   endedAt:       integer('ended_at', { mode: 'timestamp' }),
   createdAt:     integer('created_at', { mode: 'timestamp' }).default(now),
 }, (t) => ({
   active: uniqueIndex('uidx_program_enrollments_active').on(t.userId).where(sql`ended_at IS NULL`),
+}));
+
+// Progression state of one exercise in one enrolment (see lib/data/programs.js): the
+// working weight (5/3/1 main lifts: the training max), the rep target in a rep range,
+// missed sessions in a row, and why the weight last changed.
+export const programLifts = table('program_lifts', {
+  id:           integer('id').primaryKey({ autoIncrement: true }),
+  userId:       integer('user_id').notNull(),
+  enrollmentId: integer('enrollment_id').notNull(),
+  exerciseId:   integer('exercise_id').notNull(),
+  workingKg:    real('working_kg'),                          // null = nothing to go on yet
+  reps:         integer('reps'),
+  misses:       integer('misses').notNull().default(0),
+  cycle:        integer('cycle'),                            // 5/3/1: the wave the training max belongs to
+  source:       text('source').notNull(),                    // 'entered' | 'history' | 'calibrated' | 'guess'
+  lastChange:   json('last_change'),                         // { kind, fromKg, toKg } — shown in the workout
+  updatedAt:    integer('updated_at', { mode: 'timestamp' }).default(now),
+}, (t) => ({
+  uniqueLift: uniqueIndex('uidx_program_lifts_lift').on(t.enrollmentId, t.exerciseId),
+  byUser:     index('idx_program_lifts_user').on(t.userId),
 }));

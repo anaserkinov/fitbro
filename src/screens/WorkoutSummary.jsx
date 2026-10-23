@@ -7,6 +7,7 @@ import { MainButton, Section, List, Row } from '../ui/kit.jsx';
 import { Icon } from '../ui/icons.jsx';
 import ShareButton from '../ui/ShareButton.jsx';
 import { ACHIEVEMENT_BY_CODE } from '../../tgcloud/lib/data/achievements.js';
+import { describeChange } from '../../tgcloud/lib/data/programs.js';
 
 // A PR in the user's language, e.g. 'Heaviest set: 85 kg × 3'.
 export const describePrT = (pr, w) => describePr(pr, w, t);
@@ -19,6 +20,7 @@ export default function WorkoutSummary({ result }) {
   const ex = useApi('listExercises', {});
   const names = new Map((ex.data?.exercises || []).map((e) => [e.id, e.name]));
   const { workout, totals, prs, progression } = result;
+  const programChanges = result.programChanges || [];
   const badges = (result.achievements || []).map((a) => ACHIEVEMENT_BY_CODE[a.code]).filter(Boolean);
   const sortedPrs = [...prs].sort((a, b) => a.exerciseId - b.exerciseId || PR_ORDER.indexOf(a.type) - PR_ORDER.indexOf(b.type));
 
@@ -67,9 +69,21 @@ export default function WorkoutSummary({ result }) {
         </Section>
       )}
 
+      {programChanges.length > 0 && (
+        <Section title={t('Next time')}>
+          <List>
+            {programChanges.map((c) => (
+              <Row key={c.exerciseId} icon={c.toKg < c.fromKg ? 'arrowDown' : 'arrowUp'} iconColor={c.toKg < c.fromKg ? 'var(--hint)' : 'var(--good)'}
+                title={cname(c.exerciseName)} sub={describeChange(c, t, (kg) => fmt.w(kg))}
+                value={c.fromKg && c.fromKg !== c.toKg ? `${fmt.w(c.fromKg)} → ${fmt.w(c.toKg)}` : fmt.w(c.toKg)} />
+            ))}
+          </List>
+        </Section>
+      )}
+
       <ShareButton workout={workout} prs={prs} />
 
-      {!sortedPrs.length && !progression.length && !badges.length && (
+      {!sortedPrs.length && !progression.length && !programChanges.length && !badges.length && (
         <p className="center hint">{t('Consistency is the PR. See you next session.')}</p>
       )}
 

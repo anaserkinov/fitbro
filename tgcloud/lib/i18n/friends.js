@@ -91,6 +91,14 @@ export default {
     'Bench day': 'День жима лёжа',
     'Squat day': 'День приседа',
 
+    // Program progression (workout, summary, chat)
+    'Next time': 'В следующий раз',
+    '+{w}: all reps hit': '+{w}: все повторы сделаны',
+    'Same weight: your last set was all-out': 'Тот же вес: последний подход был на пределе',
+    'Lighter: 3 sessions missed in a row': 'Легче: 3 тренировки подряд не добрал повторы',
+    'Welcome back: 10% lighter': 'С возвращением: на 10% легче',
+    'Set from your first session': 'Подобран по первой тренировке',
+
     // Achievements
     'Achievement unlocked': 'Новое достижение',
     'First workout': 'Первая тренировка',
@@ -199,6 +207,13 @@ export default {
     'Deadlift day': 'Stanovaya kuni',
     'Bench day': 'Yotib jim kuni',
     'Squat day': 'Prised kuni',
+
+    'Next time': 'Keyingi safar',
+    '+{w}: all reps hit': '+{w}: barcha takrorlar bajarildi',
+    'Same weight: your last set was all-out': 'Og‘irlik o‘sha: oxirgi podxod chegarada bo‘ldi',
+    'Lighter: 3 sessions missed in a row': 'Yengilroq: 3 mashg‘ulot ketma-ket takrorlar yetmadi',
+    'Welcome back: 10% lighter': 'Xush kelibsiz: 10% yengilroq',
+    'Set from your first session': 'Birinchi mashg‘ulotingiz bo‘yicha tanlandi',
 
     'Achievement unlocked': 'Yangi yutuq',
     'First workout': 'Birinchi mashg‘ulot',
