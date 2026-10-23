@@ -1,4 +1,4 @@
-import { db, api, InputFile } from 'sdk';
+import { db, api } from 'sdk';
 import { eq, and, gte, asc, desc } from 'sdk/db';
 import * as T from '../schema.js';
 import * as v from './validate.js';
@@ -6,10 +6,10 @@ import { own } from './db-util.js';
 import { today } from './users.js';
 import { addDays, daysBetween } from './dates.js';
 import { round } from './units.js';
-import { decodeBase64, encodeBase64, imageType } from './base64.js';
+import { encodeBase64, imageType } from './base64.js';
+import { cleanImage, uploadToOwnChat } from './own-chat.js';
 
 const BW = T.bodyWeights, BM = T.bodyMeasurements, PP = T.progressPhotos;
-const MAX_PHOTO_BYTES = 10 * 1024 * 1024;   // Bot API photo upload limit
 const MEASURE_FIELDS = ['waistCm', 'chestCm', 'armsCm', 'thighsCm', 'hipsCm', 'neckCm', 'bodyFatPct'];
 
 // ── Weight ──────────────────────────────────────────────────────────────────────
@@ -127,25 +127,9 @@ export async function measurementSummary(user) {
 export async function uploadPhoto(user, input) {
   const date = v.date(input.date, 'date', { optional: true }) ?? today(user);
   const pose = v.oneOf(input.pose, 'pose', 'pose', { optional: true }) ?? 'front';
-  const bytes = typeof input.imageBase64 === 'string' ? decodeBase64(input.imageBase64) : null;
-  if (!bytes || !bytes.length) v.invalid('imageBase64 must be a base64 image', 'imageBase64');
-  if (bytes.length > MAX_PHOTO_BYTES) v.invalid('Photo is larger than 10 MB', 'imageBase64');
-  const type = imageType(bytes);
-  if (!type) v.invalid('Only JPEG or PNG photos', 'imageBase64');
-
-  const msg = await api.sendPhoto({
-    chat_id: user.id,
-    photo: new InputFile(bytes, type === 'image/png' ? 'progress.png' : 'progress.jpg', { type }),
-    caption: `Progress photo · ${date} · ${pose}`,
-    disable_notification: true,
-  });
-  const photo = await savePhotoSizes(user, msg.photo, { date, pose });
-  try {
-    await api.deleteMessage({ chat_id: user.id, message_id: msg.message_id });
-  } catch (e) {
-    console.warn('could not delete photo message', e.description || e.message);
-  }
-  return { photo };
+  const image = cleanImage(input.imageBase64);
+  const sizes = await uploadToOwnChat(user, image, { name: 'progress', caption: `Progress photo · ${date} · ${pose}` });
+  return { photo: await savePhotoSizes(user, sizes, { date, pose }) };
 }
 
 // Stores the largest size of a Telegram photo (from an upload or a chat message).

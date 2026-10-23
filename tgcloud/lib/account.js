@@ -3,12 +3,13 @@ import { db } from 'sdk';
 import { eq } from 'sdk/db';
 import * as v from './validate.js';
 import { refuse } from './endpoint.js';
-import { updateUser, refreshTargets, markOnboarded, getUser, deleteAllData } from './users.js';
+import { updateUser, refreshTargets, markOnboarded, getUser, deleteAllData, setBotState } from './users.js';
 import { logWeight } from './body.js';
 import { ensureDefaultReminders, listReminders, updateReminder as saveReminder, rescheduleAll } from './reminders.js';
 import { seedCatalog } from './catalog.js';
 import { getActiveWorkout } from './workouts.js';
 import { languageChanged } from './bot/chat.js';
+import { sendInvitePreview } from './bot/friends.js';
 
 // Profile, onboarding and settings — the Mini App's account screens.
 
@@ -31,7 +32,19 @@ export async function completeOnboarding(user, input) {
   if (u.timezone !== user.timezone) await rescheduleAll(u);
   if ((await db.$count(T.exercises, eq(T.exercises.userId, 0))) === 0) await seedCatalog();
   if (!u.onboardedAt) await markOnboarded(u.id);
+  if (u.botState && u.botState.pendingInvite) await showPendingInvite(await getUser(u.id));
   return getMe(await getUser(u.id));
+}
+
+// An invite link opened in chat before setup: show the group now. Never joins by itself.
+async function showPendingInvite(user) {
+  const { pendingInvite, ...rest } = user.botState;
+  await setBotState(user.id, Object.keys(rest).length ? rest : null);
+  try {
+    await sendInvitePreview(user, user.id, pendingInvite);
+  } catch (e) {
+    console.warn('invite preview failed', e.description || e.message);
+  }
 }
 
 export async function getSettings(user) {

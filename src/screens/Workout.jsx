@@ -6,6 +6,7 @@ import { describePrT } from './WorkoutSummary.jsx';
 import { workoutName } from '../lib/workout-start.js';
 import { t, cname } from '../lib/i18n.js';
 import { Loader, MainButton, NumberInput, Sheet, List, Row, Stepper, toast, toastError } from '../ui/kit.jsx';
+import ShareButton from '../ui/ShareButton.jsx';
 import ExercisePicker from '../ui/ExercisePicker.jsx';
 import { GuideSheet, GuideThumb } from '../ui/ExerciseGuide.jsx';
 import { exerciseGuide } from '../lib/exercise-guides.js';
@@ -397,6 +398,7 @@ export default function Workout({ id }) {
               <GuideSheet name={guide} onClose={() => setGuide(null)} />
 
               {open && <MainButton text={t('Finish workout')} busy={finishing} onClick={finish} />}
+              {!open && <ShareButton workout={d.workout} prs={d.prs || []} />}
             </>
           );
         }}

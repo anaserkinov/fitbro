@@ -40,6 +40,8 @@ const PATHS = {
   moveUp: 'm6 15 6-6 6 6',
   moveDown: 'm6 9 6 6 6-6',
   timer: 'M10 2h4M12 14l3-3M12 6a8 8 0 1 0 0 16 8 8 0 0 0 0-16z',
+  users: 'M9 4a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14.8c2 .6 3.5 2.3 3.5 5.2',
+  share: 'M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6',
 };
 
 export function Icon({ name, size = 20, stroke = 2, color = 'currentColor', fill = 'none', label, style }) {

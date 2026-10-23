@@ -28,6 +28,30 @@ const t = nutrition.computeTargets({ sex: 'male', birthDate: '2000-01-15', heigh
 assert.deepEqual(t, { kcalTarget: 2850, proteinTargetG: 180, carbsTargetG: 330, fatTargetG: 90 }); ok('targets match the design: 2850 kcal · 180/330/90');
 assert.equal(nutrition.computeTargets({ sex: 'male' }, '2026-10-22'), null); ok('targets null until profile complete');
 
+console.log('Programs (math)');
+{
+  const { PROGRAM_BY_CODE, trainingMax, weekInfo, roundTo } = await import('../tgcloud/lib/data/programs.js');
+  const w531 = PROGRAM_BY_CODE.wendler_531, ppl = PROGRAM_BY_CODE.ppl_12, fb = PROGRAM_BY_CODE.full_body_beginner;
+  const benchMain = w531.days[2].exercises[0];
+  const at = (prog, ex, weekIndex, previous = [], trainingMaxes = null) => prog.prescribe(ex, { previous, weekIndex, trainingMaxes }).map((s) => [s.weightKg, s.reps]);
+  assert.deepEqual(at(w531, benchMain, 1, [], { bench: 100 }), [[70, 3], [80, 3], [90, 3]]); ok('5/3/1 week 2, TM 100 → 70/80/90 × 3');
+  assert.deepEqual(at(w531, benchMain, 4, [], { bench: 100 }), [[67.5, 5], [77.5, 5], [87.5, 5]]); ok('next wave: TM +2.5 kg, rounded to 2.5');
+  assert.deepEqual(at(w531, benchMain, 3, [], { bench: 100 }), [[40, 5], [50, 5], [60, 5]]); ok('5/3/1 week 4 is the deload');
+  assert.deepEqual(at(w531, benchMain, 0), [[null, 5], [null, 5], [null, 5]]); ok('no training max → reps only');
+  assert.equal(trainingMax(111), 100); assert.equal(roundTo(66.6), 67.5); ok('training max = 90% of 1RM, plate-rounded');
+  const pplBench = ppl.days[0].exercises[0];
+  const four = (kg, reps) => reps.map((r) => ({ weightKg: kg, reps: r }));
+  assert.deepEqual(at(ppl, pplBench, 0, four(80, [8, 8, 8, 8])), [[82.5, 6], [82.5, 6], [82.5, 6], [82.5, 6]]); ok('double progression: top of the range → +2.5 kg, back to 6 reps');
+  assert.deepEqual(at(ppl, pplBench, 0, four(80, [8, 8, 7, 8]))[0], [80, 8]); ok('not every set at the top → same weight, one more rep');
+  assert.deepEqual(at(ppl, pplBench, 3, four(80, [8, 8, 8, 8])), [[80, 6], [80, 6]]); ok('PPL week 4: deload — 60% of the sets, no added weight');
+  assert.equal(at(ppl, pplBench, 4, four(80, [6, 6, 6, 6])).length, 4); ok('week 5 back to full volume');
+  const squat = fb.days[0].exercises[0];
+  assert.deepEqual(at(fb, squat, 0, four(60, [5, 5, 5]))[0], [65, 5]);
+  assert.deepEqual(at(fb, squat, 0, four(60, [5, 5, 4]))[0], [60, 5]); ok('linear: all reps → +5 kg (lower body), a miss → same weight');
+  assert.equal(weekInfo(fb, 7).finished, false); assert.equal(weekInfo(fb, 8).finished, true);
+  assert.deepEqual(weekInfo(w531, 5), { week: 2, of: 4, cycle: 2, deload: false, finished: false }); ok('week info: fixed programs end, 5/3/1 cycles');
+}
+
 console.log('Catalog');
 let r = await catalog.seedCatalog(); assert.ok(r.exercisesAdded > 80 && r.foodsAdded > 60); ok(`seeded ${r.exercisesAdded} exercises, ${r.foodsAdded} foods`);
 r = await catalog.seedCatalog(); assert.deepEqual(r, { exercisesAdded: 0, foodsAdded: 0 }); ok('re-seed is a no-op');

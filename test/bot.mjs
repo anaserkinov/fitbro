@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { db } from './shim/sdk.js';
 import { eq } from './shim/sdk-db.js';
 import * as T from '../tgcloud/schema.js';
+import { endpointFn } from './call.mjs';
 import onMessage from '../tgcloud/handlers/message.js';
 import onCallback from '../tgcloud/handlers/callback_query.js';
 import { getWorkout } from '../tgcloud/lib/workouts.js';
@@ -27,7 +28,7 @@ const tap = async (data, messageId = msgId) => {
   return calls().filter((c) => c[0] === 'answerCallbackQuery').at(-1)[1].text;
 };
 const buttons = (m) => (m.reply_markup?.inline_keyboard || []).flat();
-const endpoint = async (name, input) => (await import(`../tgcloud/endpoints/${name}.js`)).default(input, { initData: { user: from } });
+const endpoint = async (name, input) => (await endpointFn(name))(input, { initData: { user: from } });
 let n = 0; const ok = (name) => { n++; console.log('  ✓', name); };
 
 console.log('\nChat bot');
@@ -76,6 +77,8 @@ reset(); await tap(`w:d:${setId(buttons(card2)[0])}`, cardId);
 reset(); await tap(`w:d:${setId(buttons(last('editMessageText') || pull)[0])}`, cardId);
 reset(); const fin = await tap(`w:f:${w.id}`, cardId);
 assert.equal(fin, 'Finished 💪'); assert.match(last('editMessageText').text, /✅ <b>Upper<\/b> done/); ok('finish → summary in the same message');
+assert.equal(await db.$count(T.activities, eq(T.activities.workoutId, w.id)), 1); ok('finishing in chat adds a friends feed item');
+assert.match(last('editMessageText').text, /🏅 <b>Achievement unlocked<\/b>\n🏁 First workout/); ok('first workout in chat → achievement line');
 reset(); const prsBefore = await db.$count(T.personalRecords, eq(T.personalRecords.userId, UID));
 const stale = await tap(`w:d:${setId(buttons(card)[0])}`, cardId);
 assert.equal(stale, 'Already done'); assert.match(last('editMessageText').text, /already finished/);
@@ -95,7 +98,7 @@ await endpoint('deleteMyData', { confirm: 'DELETE' });
 // Languages: a new user starts in their Telegram language and can switch in the app.
 const ru = { id: 445, first_name: 'Аня', language_code: 'ru' };
 const sayAs = (u, text) => onMessage({ message_id: ++msgId, from: u, chat: { id: u.id, type: 'private' }, text });
-const endpointAs = async (u, name, input) => (await import(`../tgcloud/endpoints/${name}.js`)).default(input, { initData: { user: u } });
+const endpointAs = async (u, name, input) => (await endpointFn(name))(input, { initData: { user: u } });
 reset(); await sayAs(ru, '/start');
 assert.match(sent()[0].text, /Привет, Аня!/); assert.equal(sent()[0].reply_markup.keyboard[0][1].text, '📊 Сегодня');
 assert.equal(buttons(sent()[1])[0].text, '📱 Настроить FitPro'); ok('Telegram language ru → Russian welcome and keyboard');

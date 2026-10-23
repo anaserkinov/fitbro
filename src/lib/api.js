@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { tg, inTelegram } from './tg.js';
 
-// call(name, input) → result. Inside Telegram it goes through Serverless.call (which
-// attaches the verified init data); in a browser it posts to the dev server.
+// call(name, input) → result. Every call goes to the server's single `api` endpoint as
+// { fn: name, input } (tgcloud/lib/api-routes.js lists the names). Inside Telegram it
+// goes through Serverless.call (which attaches the verified init data); in a browser it
+// posts to the dev server.
 
 export class ApiError extends Error {
   constructor(message, type, parameters) {
@@ -15,18 +17,19 @@ export class ApiError extends Error {
 }
 
 export function call(name, input = {}) {
+  const body = { fn: name, input };
   if (inTelegram && tg.Serverless) {
     return new Promise((resolve, reject) => {
-      tg.Serverless.call(name, input, (err, result) => {
+      tg.Serverless.call('api', body, (err, result) => {
         if (err) reject(new ApiError(err.message, err.type, err.parameters));
         else resolve(result);
       });
     });
   }
-  return fetch(`/api/${name}`, {
+  return fetch('/api/api', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   }).then(async (res) => {
     const body = await res.json().catch(() => null);
     if (body && body.ok) return body.result;
@@ -88,12 +91,13 @@ export function invalidate(...names) {
 
 // Endpoints whose data changes after each kind of write.
 export const AFFECTS = {
-  workout: ['getWorkout', 'getToday', 'listWorkouts', 'getConsistency', 'getMuscleVolume', 'getExerciseHistory', 'listRoutines', 'listExercises'],
+  workout: ['getWorkout', 'getToday', 'listWorkouts', 'getConsistency', 'getMuscleVolume', 'getExerciseHistory', 'listRoutines', 'listExercises', 'getGroup', 'getGroupFeed', 'getAchievements', 'listChallenges'],
   food: ['getFoodDay', 'getToday', 'searchFoods', 'browseFoods'],
   body: ['getBody', 'getToday'],
   routines: ['listRoutines', 'getRoutine', 'getToday'],
   exercises: ['listExercises', 'getExerciseHistory'],
   settings: ['getSettings', 'getToday', 'getMe', 'getFoodDay'],
+  groups: ['listGroups', 'getGroup', 'getGroupFeed', 'listChallenges'],
 };
 
 export async function mutate(name, input, affects = []) {

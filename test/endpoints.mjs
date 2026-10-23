@@ -4,13 +4,14 @@ import assert from 'node:assert/strict';
 import { db } from './shim/sdk.js';
 import { eq } from './shim/sdk-db.js';
 import * as T from '../tgcloud/schema.js';
+import { endpointFn } from './call.mjs';
 import { localDate, addDays, weekday } from '../tgcloud/lib/dates.js';
 import { processReminders, processRestTimers } from '../tgcloud/lib/notify.js';
 import { encodeBase64 } from '../tgcloud/lib/base64.js';
 
 const E = {};
 const call = async (name, input = {}, userId = 222) => {
-  E[name] ??= (await import(`../tgcloud/endpoints/${name}.js`)).default;
+  E[name] ??= await endpointFn(name);
   const out = await E[name](input, { initData: { user: { id: userId, first_name: 'Endpoint', language_code: 'en' } } });
   assert.ok(!hasDate(out), `${name} returned a Date (it would reach the app as {})`);
   return out;
@@ -21,6 +22,20 @@ let n = 0; const ok = (name) => { n++; console.log('  ✓', name); };
 const hasDate = (v) => v instanceof Date || (Array.isArray(v) ? v.some(hasDate) : !!v && typeof v === 'object' && Object.values(v).some(hasDate));
 const TZ = 'Asia/Tashkent';
 const today = localDate(TZ);
+
+console.log('\nEndpoints: router');
+{
+  const api = (await import('../tgcloud/endpoints/api.js')).default;
+  const { ROUTES } = await import('../tgcloud/lib/api-routes.js');
+  const ctx = { initData: { user: { id: 222, first_name: 'Endpoint', language_code: 'en' } } };
+  await fails(api({ fn: 'nope' }, ctx), 'UNKNOWN_CALL'); await fails(api({ fn: 'toString' }, ctx), 'UNKNOWN_CALL'); await fails(api({}, ctx), 'UNKNOWN_CALL'); ok('unknown or missing call name → UNKNOWN_CALL');
+  await fails(api({ fn: 'tick' }, ctx), 'UNKNOWN_CALL'); ok('tick is not reachable through the router');
+  const fs = await import('node:fs');
+  const documented = new Set([...fs.readFileSync(new URL('../docs/endpoints.md', import.meta.url), 'utf8').matchAll(/^\| `(\w+)`(?: \/ `(\w+)`)?/gm)].flatMap((m) => [m[1], m[2]]).filter(Boolean));
+  for (const n of ['tick', 'adminSeed']) documented.delete(n);
+  assert.deepEqual([...documented].filter((n) => !ROUTES[n]), [], 'documented but not routed');
+  assert.deepEqual(Object.keys(ROUTES).filter((n) => !documented.has(n)), [], 'routed but not documented'); ok('route table matches docs/endpoints.md');
+}
 
 console.log('\nEndpoints: account');
 let me = await call('getMe'); assert.equal(me.onboarded, false); ok('new user is not onboarded');
@@ -193,6 +208,20 @@ await db.update(T.workouts).set({ chatMessageId: 1, restEndsAt: new Date(Date.no
 globalThis.apiCalls = [];
 assert.equal(await processRestTimers(), 1); assert.match(globalThis.apiCalls[0][1].text, /Rest over — next: Barbell Bench Press 82\.5 kg × 8/); ok('rest-over ping names the next set');
 await call('discardWorkout', { id: chatW.workout.id });
+
+const { onChannelPost } = await import('../tgcloud/lib/notify.js');
+const HB = -1001234567890;
+assert.equal(await onChannelPost({ chat: { id: HB, type: 'channel' }, text: 'tick' }, null), null); ok('heartbeat off when no channel is configured');
+assert.equal(await onChannelPost({ chat: { id: -100999, type: 'channel' }, text: 'tick' }, HB), null); ok('a post in another channel does nothing');
+assert.equal(await onChannelPost({ chat: { id: HB, type: 'channel' }, text: 'hello' }, HB), null); ok('other text in the heartbeat channel does nothing');
+const beat = await onChannelPost({ chat: { id: HB, type: 'channel' }, text: 'tick' }, HB);
+assert.ok(beat && beat.reminders && 'friendPings' in beat && 'chatPosts' in beat); ok('"tick" in the heartbeat channel runs the scheduler');
+globalThis.apiCalls = [];
+await onChannelPost({ chat: { id: HB, type: 'channel' }, text: 'Ping ' }, HB);   // as a phone sends it
+const pong = globalThis.apiCalls.filter((c) => c[0] === 'sendMessage').at(-1)[1];
+assert.equal(pong.chat_id, HB); assert.match(pong.text, /^pong ✓ .* UTC\nreminders: \d+ sent/); ok('"ping" runs it too and answers in the channel');
+const onChannelHandler = (await import('../tgcloud/handlers/channel_post.js')).default;
+await onChannelHandler({ chat: { id: HB, type: 'channel' }, text: 'tick' }); ok('handler with the default (unset) channel is a no-op');
 
 console.log('Endpoints: delete my data');
 await fails(call('deleteMyData', {}), 'CONFIRM_REQUIRED'); ok('needs confirmation');

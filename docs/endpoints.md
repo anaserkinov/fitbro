@@ -1,7 +1,10 @@
 # FitPro — Mini App endpoints
 
-Call with `Telegram.WebApp.Serverless.call(name, input, (err, result) => …)`.
-Each endpoint is `tgcloud/endpoints/<name>.js`, a thin wrapper over a `tgcloud/lib/` function.
+Call with `call(name, input)` from `src/lib/api.js`. Every call goes to the single
+`api` endpoint — `Telegram.WebApp.Serverless.call('api', { fn: name, input }, …)` — because
+the platform caps the number of modules per app. `tgcloud/lib/api-routes.js` maps each
+name to a `tgcloud/lib/` function; only `tick` and `adminSeed` are separate endpoints.
+An unknown name → `UNKNOWN_CALL`.
 
 **Conventions** — weights in **kg**, energy in **kcal**, lengths in cm, distance in m;
 dates `YYYY-MM-DD` in the user's timezone (omit `date` = today); instants are ISO strings.
@@ -9,7 +12,7 @@ The app converts to the user's `weightUnit` / `energyUnit` for display.
 
 **Errors** — `err.type === 'ENDPOINT_ERROR'` with `err.parameters.code`:
 `INVALID_INPUT` (+ `field`), `NOT_FOUND`, `NOT_ONBOARDED`, `WORKOUT_IN_PROGRESS`,
-`ALREADY_FINISHED`, `CONFIRM_REQUIRED`, `FORBIDDEN`. Unknown input keys are rejected.
+`ALREADY_FINISHED`, `CONFIRM_REQUIRED`, `FORBIDDEN` (more under *Friends*). Unknown input keys are rejected.
 
 ★ = needs a finished onboarding.
 
@@ -59,7 +62,7 @@ The app converts to the user's `weightUnit` / `energyUnit` for display.
 | `updateSet` | `id` + any of `weightKg, reps, durationSec, distanceM, kcal, rpe, rir, setType, completed` | `{ set, prs, restEndsAt }` — `prs` = records just broken |
 | `deleteSet` | `id` | `{ ok }` |
 | `setRest` | `workoutId, seconds` (0 = clear) | `{ restEndsAt }` |
-| `finishWorkout` | `id, notes?` | `{ workout, totals, prs, progression }` or `{ discarded: true }` if nothing was done |
+| `finishWorkout` | `id, notes?` | `{ workout, totals, prs, progression, achievements }` or `{ discarded: true }` if nothing was done |
 | `discardWorkout` | `id` | `{ ok }` |
 | `listWorkouts` | `from, to` | `{ workouts }` (finished, newest first, with `prs`) |
 
@@ -69,6 +72,7 @@ The app converts to the user's `weightUnit` / `energyUnit` for display.
 |---|---|---|
 | `getFoodDay` | `date?` | `{ date, meals: [{ meal, items, totals }], totals, targets, water }` |
 | `searchFoods` | `q?` (none = `{ recent, favorites }`) | `{ results }` |
+| `browseFoods` | `category` (a built-in food category, `mine` or `recipes`) | `{ category, foods }` (with `category, favorite, custom`) |
 | `getFood` | `id` | `{ food, items }` (items for recipes) |
 | `lookupBarcode` | `barcode` | `{ food }` or `{ food: null }` |
 | `logFood` | `meal, date?` + `foodId, quantity, unit: g\|ml\|serving` **or** `quickAdd: { name?, kcal, proteinG?, carbsG?, fatG? }` | `{ log, day }` |
@@ -93,9 +97,70 @@ The app converts to the user's `weightUnit` / `energyUnit` for display.
 | `getPhoto` | `id` | `{ photo, mime, imageBase64 }` |
 | `deletePhoto` | `id` | `{ ok }` |
 
+## Friends
+
+Groups are joined by invite link: `t.me/<bot>?startapp=g_<code>` opens the Mini App with that
+`start_param`; the app shows `previewGroup` and joins only on an explicit tap. Every
+cross-user read goes through `lib/social.js`: you see a member's data only in a group you
+share, and only what they allow there (`shareWorkouts`, `sharePrs`, `shareRoutines`,
+`shareWeight`, per group). Feed items and challenge activity count only from the time
+both people joined that group. All of these need a finished onboarding.
+
+| Endpoint | Input | Returns |
+|---|---|---|
+| `createGroup` | `name` | `{ group }` — `id, name, ownerId, memberCount, role, inviteLink` |
+| `listGroups` | — | `{ groups }` |
+| `previewGroup` | `code` (`g_` prefix optional) | `{ group: { id, name, memberCount, ownerName }, isMember }` — no members, no activity |
+| `joinGroup` | `code` | `{ group, joined }` (`joined: false` if already a member) |
+| `leaveGroup` | `groupId` | `{ left: true }` — an owner hands over to the longest-standing member; the last one out deletes the group |
+| `updateGroup` | `groupId, name` (owner) | `{ group }` |
+| `removeMember` | `groupId, userId` (owner) | `{ removed: true }` — they can't rejoin until the link is reset |
+| `resetInvite` | `groupId` (owner) | `{ group }` with a new `inviteLink`; clears removals |
+| `updateMembership` | `groupId` + any of `shareWorkouts, sharePrs, shareRoutines, shareWeight, mutePings, showInChat` | `{ membership }` |
+| `getGroup` | `groupId, week?` (any date in the week) | `{ group (… chatLinked), me (my settings), members, leaderboard: { from, to, consistency, volume, strength } }` |
+| `getGroupFeed` | `groupId, before?` (cursor) | `{ items: [{ id, userId, name, type: workout\|achievement, payload, localDate, reactions, myReaction }], nextBefore }` |
+| `react` | `activityId, emoji: 👏\|🔥\|💪` (same again = remove) | `{ activityId, reactions, myReaction }` |
+| `listMemberRoutines` | `userId` | `{ member, routines }` |
+| `copyRoutine` | `routineId` (a groupmate's) | `{ routine }` — custom exercises reused by name or copied; target weights empty |
+| `createChallenge` | `groupId, metric: workouts\|volume_kg\|sets\|active_days\|exercise_reps, startDate, endDate` (≤ 90 days, not in the past) `+ target?, title?, exerciseId` (built-in, for `exercise_reps`) | `{ challenge }` with `status, standings` |
+| `listChallenges` | `groupId` | `{ challenges }` — running and ended in the last 30 days |
+| `deleteChallenge` | `id` (creator or owner) | `{ deleted: true }` |
+
+Leaderboard rows: consistency `{ rank, userId, name, done, goal, pct, streakWeeks }` (the
+same Monday–Sunday week for everyone, against each member's own `workoutsPerWeek`);
+volume `{ volumeKg, sets }`; strength `{ bodyWeightKg, lifts: [{ exercise, e1rmKg, ratio }], total }`
+(best e1RM in 90 days ÷ latest weigh-in, members sharing weight only).
+
+## Sharing, achievements, programs, export
+
+| Endpoint | Input | Returns |
+|---|---|---|
+| `prepareShare` | `workoutId` (finished), `imageBase64` (the card, PNG/JPEG) | `{ id }` for `Telegram.WebApp.shareMessage(id)` (Bot API 8.0+) |
+| `getAchievements` | — | `{ achievements: [{ code, earnedAt }], earnedCount }` — catalogue in `lib/data/achievements.js` |
+| `listPrograms` | — | `{ programs, activeCode, suggestedMaxes }` (5/3/1 1RMs from the last 90 days) |
+| `enrollProgram` | `code` + `oneRepMaxes?: { ohp, deadlift, bench, squat }` (kg, 5/3/1) | same as `getMyProgram` — creates the routines and **replaces the weekly schedule** |
+| `getMyProgram` | — | `{ program, enrollment, weekIndex, week, of, cycle, deload, routines }` or `{ program: null, lastEnded }` |
+| `leaveProgram` | — | `{ left: true }` — routines archived, schedule days cleared, workouts kept |
+| `exportData` | — | `{ files }` — the bot sends CSVs to your chat; once an hour |
+
+`finishWorkout` also returns `achievements: [{ code }]` (newly earned). Starting a program's
+routine pre-fills that week's prescribed sets; its exercises have `target: null`.
+
+Friends error codes: `INVITE_INVALID`, `REMOVED_FROM_GROUP`, `GROUP_FULL` (50 members),
+`GROUP_LIMIT` (10 groups), `NOT_OWNER`, `CHALLENGE_LIMIT` (5 running), `NOT_FINISHED`,
+`PROGRAM_ACTIVE`, `RATE_LIMITED` (+ `retryAfterSec`), `NOTHING_TO_EXPORT`,
+`BOT_CHAT_REQUIRED` (the bot can't message you yet — call `Telegram.WebApp.requestWriteAccess()` and retry).
+
 ## System
 
 | Endpoint | Who | What |
 |---|---|---|
-| `tick` | ids in `lib/config.js` → `SCHEDULER_USER_IDS` | sends due reminders + rest-over pings; call every minute |
+| `tick` | ids in `lib/config.js` → `SCHEDULER_USER_IDS` (by hand, via `npx tgcloud run`) | sends due reminders, rest-over pings, friends' workout pings, challenge results and weekly posts in linked group chats |
 | `adminSeed` | `ADMIN_USER_IDS` | adds any new built-in exercises/foods |
+
+**Running the scheduler.** The platform has no cron and only accepts init data signed by
+Telegram, so `tick` runs from a heartbeat instead: a Cloudflare cron worker has a helper
+bot post `tick` every minute in a private channel where @fitbroapp is an admin (then
+delete it). `handlers/channel_post.js` runs the scheduler for that channel only —
+`TICK_CHANNEL_ID` in `lib/config.js` (null = off). Reminders more than 15 minutes late
+and workout pings over an hour old are skipped, so downtime doesn't flood anyone.

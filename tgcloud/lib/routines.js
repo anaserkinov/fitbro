@@ -1,11 +1,13 @@
 import { db } from 'sdk';
-import { eq, and, inArray, isNull, isNotNull, asc, gte, lte } from 'sdk/db';
+import { eq, and, inArray, isNull, isNotNull, asc, gte, lte, sql } from 'sdk/db';
 import * as T from '../schema.js';
 import * as v from './validate.js';
 import { own, visible } from './db-util.js';
 import { today } from './users.js';
 import { weekday, weekStart, addDays } from './dates.js';
 import { normalizeGroups } from './supersets.js';
+import { canSee } from './social.js';
+import { saveExercise } from './exercises.js';
 
 const R = T.routines, RE = T.routineExercises, SCH = T.schedule;
 const SECONDS_PER_SET = 40;   // time under load + setup, for the duration estimate
@@ -163,4 +165,63 @@ export async function saveSchedule(user, input) {
   await db.delete(SCH).where(eq(SCH.userId, user.id)).run();
   if (days.length) await db.insert(SCH).values(days.map((d) => ({ userId: user.id, weekday: d.weekday, routineId: d.routineId ?? null }))).run();
   return listRoutines(user);
+}
+
+// ── Friends: a groupmate's routines ─────────────────────────────────────────────
+
+// A groupmate's active routines, when they share routines in a group you're both in.
+export async function listMemberRoutines(user, input) {
+  const memberId = v.id(input.userId, 'userId');
+  if (memberId === user.id || !(await canSee(user.id, memberId, 'routines'))) v.notFound('Routines');
+  const member = await db.select().from(T.users).where(eq(T.users.id, memberId)).get();
+  if (!member) v.notFound('Routines');
+  const routines = await db.select().from(R)
+    .where(and(eq(R.userId, memberId), isNull(R.archivedAt))).orderBy(asc(R.position), asc(R.id)).all();
+  const items = await itemsFor(memberId, routines.map((r) => r.id));
+  return {
+    member: { userId: member.id, name: member.firstName },
+    routines: routines.map((r) => decorate(r, items.filter((i) => i.routineId === r.id && i.exercise && !i.exercise.archived), member)),
+  };
+}
+
+// The copier's exercise for one of the friend's: built-ins as they are, a custom one by
+// name (case-insensitive, like the unique index) or a fresh copy through saveExercise.
+async function exerciseForCopier(user, ex) {
+  if (ex.userId === 0) return ex.id;
+  const mine = await db.select().from(T.exercises)
+    .where(and(eq(T.exercises.userId, user.id), sql`lower(${T.exercises.name}) = lower(${ex.name})`)).get();
+  if (mine) {
+    if (mine.archivedAt) await db.update(T.exercises).set({ archivedAt: null }).where(eq(T.exercises.id, mine.id)).run();
+    return mine.id;
+  }
+  const fields = { name: ex.name, muscle: ex.muscle, trackType: ex.trackType };
+  for (const k of ['equipment', 'category', 'defaultRestSec', 'notes']) if (ex[k] !== null && ex[k] !== undefined) fields[k] = ex[k];
+  if (Array.isArray(ex.aliases) && ex.aliases.length) fields.aliases = ex.aliases;
+  return (await saveExercise(user, fields)).exercise.id;
+}
+
+// Copies a groupmate's routine into your library. Target weights stay empty — their
+// numbers aren't yours.
+export async function copyRoutine(user, input) {
+  const routineId = v.id(input.routineId, 'routineId');
+  const src = await db.select().from(R).where(and(eq(R.id, routineId), isNull(R.archivedAt))).get();
+  if (!src || src.userId === user.id || !(await canSee(user.id, src.userId, 'routines'))) v.notFound('Routine');
+  const author = await db.select({ firstName: T.users.firstName }).from(T.users).where(eq(T.users.id, src.userId)).get();
+  const srcItems = await db.select().from(RE).where(and(eq(RE.routineId, src.id), eq(RE.userId, src.userId))).orderBy(asc(RE.position), asc(RE.id)).all();
+  const exs = srcItems.length ? await db.select().from(T.exercises).where(inArray(T.exercises.id, srcItems.map((i) => i.exerciseId))).all() : [];
+  const byId = new Map(exs.map((e) => [e.id, e]));
+
+  const items = [];
+  for (const it of srcItems) {
+    const ex = byId.get(it.exerciseId);
+    if (!ex || ex.archivedAt) continue;
+    const item = { exerciseId: await exerciseForCopier(user, ex), targetSets: it.targetSets };
+    for (const k of ['targetRepsMin', 'targetRepsMax', 'targetDurationSec', 'restSec', 'supersetGroup', 'notes']) if (it[k] !== null && it[k] !== undefined) item[k] = it[k];
+    items.push(item);
+  }
+
+  const clash = await db.select({ id: R.id }).from(R)
+    .where(and(eq(R.userId, user.id), isNull(R.archivedAt), sql`lower(${R.name}) = lower(${src.name})`)).get();
+  const name = clash && author && author.firstName ? `${src.name} (${author.firstName})`.slice(0, 60) : src.name;
+  return saveRoutine(user, { name, ...(src.notes ? { notes: src.notes } : {}), items });
 }

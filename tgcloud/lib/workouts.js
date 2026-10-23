@@ -10,6 +10,9 @@ import { e1rm, summarizeSets } from './strength.js';
 import { recordSetPrs, removeSetPrs, recordSessionVolumePrs, prHighlights } from './prs.js';
 import { applyProgression } from './progression.js';
 import { restsAfter, normalizeGroups } from './supersets.js';
+import { recordWorkoutActivity, recordAchievementActivity, deleteWorkoutActivity } from './activity.js';
+import { evaluateAchievements } from './achievements.js';
+import { programPlan, isProgramRoutine } from './programs.js';
 
 const W = T.workouts, WE = T.workoutExercises, S = T.sets, P = T.personalRecords;
 
@@ -31,7 +34,8 @@ async function previousSets(userId, exerciseId, workoutId) {
 
 // Adds an exercise to a workout with planned (not yet completed) sets, pre-filled from
 // the routine target or, failing that, the previous session.
-async function addExercise(user, workout, exerciseId, { position, item = null, sets = null }) {
+// `plan` (programs): (exerciseId, previousSets) → this week's planned sets, or null.
+async function addExercise(user, workout, exerciseId, { position, item = null, sets = null, plan = null }) {
   const ex = await getExercise(user.id, exerciseId);
   const [we] = await db.insert(WE).values({
     userId: user.id, workoutId: workout.id, exerciseId: ex.id,
@@ -41,6 +45,14 @@ async function addExercise(user, workout, exerciseId, { position, item = null, s
   }).returning();
 
   const prev = (await previousSets(user.id, ex.id, workout.id)).filter((s) => s.setType !== 'warmup');
+  const planned = plan ? plan(ex.id, prev) : null;
+  if (planned) {
+    await insertChunked(S, planned.map((p, i) => ({
+      userId: user.id, workoutId: workout.id, workoutExerciseId: we.id, exerciseId: ex.id,
+      position: i, setType: p.setType || 'working', completed: false, weightKg: p.weightKg, reps: p.reps,
+    })));
+    return we;
+  }
   const count = item ? item.targetSets : sets ?? Math.max(prev.length, 3);
   const rows = [];
   for (let i = 0; i < count; i++) {
@@ -65,8 +77,10 @@ export async function startWorkout(user, input) {
   if (await getActiveWorkout(user.id)) refuse('Finish or discard your current workout first', 'WORKOUT_IN_PROGRESS');
 
   let items = [];
+  let plan = null;
   if (routineId) {
     const routine = await own(T.routines, routineId, user.id, 'Routine');
+    plan = await programPlan(user, routine);
     name = name ?? routine.name;
     items = await db.select().from(T.routineExercises)
       .where(and(eq(T.routineExercises.routineId, routineId), eq(T.routineExercises.userId, user.id)))
@@ -80,7 +94,7 @@ export async function startWorkout(user, input) {
     if (isUniqueViolation(e)) refuse('Finish or discard your current workout first', 'WORKOUT_IN_PROGRESS');
     throw e;
   }
-  for (const [position, item] of items.entries()) await addExercise(user, workout, item.exerciseId, { position, item });
+  for (const [position, item] of items.entries()) await addExercise(user, workout, item.exerciseId, { position, item, plan });
   return getWorkout(user, { id: workout.id });
 }
 
@@ -95,7 +109,8 @@ export async function getWorkout(user, input = {}) {
   const exIds = [...new Set(wes.map((w) => w.exerciseId))];
   const exs = exIds.length ? await db.select().from(T.exercises).where(inArray(T.exercises.id, exIds)).all() : [];
   const exById = new Map(exs.map((e) => [e.id, e]));
-  const reIds = wes.map((w) => w.routineExerciseId).filter(Boolean);
+  // A program's routine targets are uniform; the planned sets carry the real prescription.
+  const reIds = (await isProgramRoutine(workout.routineId)) ? [] : wes.map((w) => w.routineExerciseId).filter(Boolean);
   const res = reIds.length ? await db.select().from(T.routineExercises).where(inArray(T.routineExercises.id, reIds)).all() : [];
   const reById = new Map(res.map((r) => [r.id, r]));
   const bests = exIds.length ? await db.select({ exerciseId: P.exerciseId, best: sql`max(${P.value})` }).from(P)
@@ -292,6 +307,7 @@ export async function setRest(user, input) {
 }
 
 async function deleteWorkoutRows(user, workoutId) {
+  await deleteWorkoutActivity(user.id, workoutId);
   await db.delete(P).where(and(eq(P.userId, user.id), eq(P.workoutId, workoutId))).run();
   await db.delete(S).where(and(eq(S.userId, user.id), eq(S.workoutId, workoutId))).run();
   await db.delete(WE).where(and(eq(WE.userId, user.id), eq(WE.workoutId, workoutId))).run();
@@ -340,7 +356,10 @@ export async function finishWorkout(user, input) {
   await recordSessionVolumePrs(user.id, w.id);
   const progression = await applyProgression(user.id, w.id);
   const prs = await prHighlights(user.id, { workoutId: w.id });
-  return { workout, totals, prs, progression };
+  await recordWorkoutActivity(user, workout, prs);   // friends feed; pings go out from tick
+  const { announced } = await evaluateAchievements(user);
+  await recordAchievementActivity(user, announced, workout.localDate);
+  return { workout, totals, prs, progression, achievements: announced };
 }
 
 // Finished workouts between two dates, newest first (history list / calendar).

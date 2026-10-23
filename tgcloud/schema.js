@@ -57,6 +57,9 @@ export const users = table('users', {
   botState:        json('bot_state'),
 
   onboardedAt:     integer('onboarded_at', { mode: 'timestamp' }),
+  achievementsEvaluatedAt: integer('achievements_evaluated_at', { mode: 'timestamp' }), // null = backfill pending
+  lastExportAt:    integer('last_export_at', { mode: 'timestamp' }),   // CSV export, at most hourly
+  botStartedAt:    integer('bot_started_at', { mode: 'timestamp' }),   // has a private chat with the bot
   createdAt:       integer('created_at', { mode: 'timestamp' }).default(now),
   updatedAt:       integer('updated_at', { mode: 'timestamp' }).default(now),
 });
@@ -92,6 +95,8 @@ export const routines = table('routines', {
   name:       text('name').notNull(),                        // 'Push A'
   notes:      text('notes'),
   position:   integer('position').notNull().default(0),
+  programEnrollmentId: integer('program_enrollment_id'),     // made by a multi-week program
+  programDay: integer('program_day'),                        // index into the program's days
   archivedAt: integer('archived_at', { mode: 'timestamp' }),
   createdAt:  integer('created_at', { mode: 'timestamp' }).default(now),
   updatedAt:  integer('updated_at', { mode: 'timestamp' }).default(now),
@@ -360,4 +365,133 @@ export const reminders = table('reminders', {
 }, (t) => ({
   uniqueType: uniqueIndex('uidx_reminders_user_type').on(t.userId, t.type),
   due:        index('idx_reminders_due').on(t.nextRunAt).where(sql`enabled = 1`),
+}));
+
+// ── Friends ─────────────────────────────────────────────────────────────────────
+
+// A group of friends who compare training. Joined by invite link (invite_code);
+// resetting the code invalidates old links and clears group_blocks.
+export const groups = table('groups', {
+  id:         integer('id').primaryKey({ autoIncrement: true }),
+  name:       text('name').notNull(),
+  ownerId:    integer('owner_id').notNull(),
+  inviteCode: text('invite_code').notNull(),
+  chatId:     integer('chat_id'),                            // linked Telegram group chat
+  nextPostAt: integer('next_post_at', { mode: 'timestamp' }), // weekly leaderboard post in that chat
+  createdAt:  integer('created_at', { mode: 'timestamp' }).default(now),
+}, (t) => ({
+  uniqueCode: uniqueIndex('uidx_groups_invite_code').on(t.inviteCode),
+  uniqueChat: uniqueIndex('uidx_groups_chat').on(t.chatId).where(sql`chat_id IS NOT NULL`),
+  duePosts:   index('idx_groups_next_post').on(t.nextPostAt).where(sql`chat_id IS NOT NULL`),
+}));
+
+// Share settings are per membership: you can share your weight with gym friends but
+// not with coworkers. Every cross-user read goes through lib/social.js.
+export const groupMembers = table('group_members', {
+  id:            integer('id').primaryKey({ autoIncrement: true }),
+  groupId:       integer('group_id').notNull(),
+  userId:        integer('user_id').notNull(),
+  role:          text('role').notNull().default('member'),   // 'owner' | 'member'
+  shareWorkouts: boolean('share_workouts').notNull().default(true),
+  sharePrs:      boolean('share_prs').notNull().default(true),
+  shareRoutines: boolean('share_routines').notNull().default(true),
+  shareWeight:   boolean('share_weight').notNull().default(false),
+  mutePings:     boolean('mute_pings').notNull().default(false),
+  showInChat:    boolean('show_in_chat').notNull().default(false),  // listed in a linked chat's posts
+  joinedAt:      integer('joined_at', { mode: 'timestamp' }).notNull().default(now),
+}, (t) => ({
+  uniqueMember: uniqueIndex('uidx_group_members_group_user').on(t.groupId, t.userId),
+  byUser:       index('idx_group_members_user').on(t.userId),
+}));
+
+// Members the owner removed; they can't rejoin until the invite link is reset.
+export const groupBlocks = table('group_blocks', {
+  id:      integer('id').primaryKey({ autoIncrement: true }),
+  groupId: integer('group_id').notNull(),
+  userId:  integer('user_id').notNull(),
+}, (t) => ({
+  uniqueBlock: uniqueIndex('uidx_group_blocks_group_user').on(t.groupId, t.userId),
+  byUser:      index('idx_group_blocks_user').on(t.userId),
+}));
+
+// The friends feed: one row per finished workout or earned achievement, per user —
+// not per group. Who may see it is decided at read time (lib/social.js), so changing a
+// share setting applies to old items too. notified_at = the ping step has handled it;
+// pinged_at = at least one groupmate actually got a ping (drives the per-person cooldown).
+export const activities = table('activities', {
+  id:         integer('id').primaryKey({ autoIncrement: true }),
+  userId:     integer('user_id').notNull(),
+  type:       text('type').notNull(),                        // 'workout' | 'achievement'
+  workoutId:  integer('workout_id'),
+  payload:    json('payload'),                               // summary snapshot, see lib/activity.js
+  localDate:  text('local_date').notNull(),
+  createdAt:  integer('created_at', { mode: 'timestamp' }).notNull().default(now),
+  notifiedAt: integer('notified_at', { mode: 'timestamp' }),
+  pingedAt:   integer('pinged_at', { mode: 'timestamp' }),
+}, (t) => ({
+  byUser:    index('idx_activities_user').on(t.userId, t.createdAt),
+  byWorkout: index('idx_activities_workout').on(t.workoutId),
+  pending:   index('idx_activities_pending').on(t.id).where(sql`notified_at IS NULL`),
+}));
+
+export const activityReactions = table('activity_reactions', {
+  id:         integer('id').primaryKey({ autoIncrement: true }),
+  activityId: integer('activity_id').notNull(),
+  userId:     integer('user_id').notNull(),
+  emoji:      text('emoji').notNull(),
+  createdAt:  integer('created_at', { mode: 'timestamp' }).default(now),
+}, (t) => ({
+  uniqueReaction: uniqueIndex('uidx_activity_reactions_activity_user').on(t.activityId, t.userId),
+  byUser:         index('idx_activity_reactions_user').on(t.userId),
+}));
+
+// Time-boxed group challenges. Standings are computed from workouts/sets when read
+// (lib/challenges.js); results_sent_at = the final results went out (once).
+export const challenges = table('challenges', {
+  id:            integer('id').primaryKey({ autoIncrement: true }),
+  groupId:       integer('group_id').notNull(),
+  createdBy:     integer('created_by').notNull(),
+  title:         text('title'),                              // null = named after the metric
+  metric:        text('metric').notNull(),                   // 'workouts' | 'volume_kg' | 'sets' | 'active_days' | 'exercise_reps'
+  exerciseId:    integer('exercise_id'),                     // for 'exercise_reps' (a built-in exercise)
+  target:        real('target'),                             // optional goal per member
+  startDate:     text('start_date').notNull(),
+  endDate:       text('end_date').notNull(),
+  resultsSentAt: integer('results_sent_at', { mode: 'timestamp' }),
+  createdAt:     integer('created_at', { mode: 'timestamp' }).default(now),
+}, (t) => ({
+  byGroup: index('idx_challenges_group').on(t.groupId, t.endDate),
+  pending: index('idx_challenges_pending').on(t.endDate).where(sql`results_sent_at IS NULL`),
+}));
+
+// ── Achievements ────────────────────────────────────────────────────────────────
+
+// Earned badges; the catalogue lives in lib/data/achievements.js. `silent` grants come
+// from the first evaluation of an existing user's history — recorded without a feed
+// item or ping, so turning the feature on doesn't flood groups.
+export const userAchievements = table('user_achievements', {
+  id:       integer('id').primaryKey({ autoIncrement: true }),
+  userId:   integer('user_id').notNull(),
+  code:     text('code').notNull(),
+  earnedAt: integer('earned_at', { mode: 'timestamp' }).notNull().default(now),
+  silent:   boolean('silent').notNull().default(false),
+}, (t) => ({
+  uniqueCode: uniqueIndex('uidx_user_achievements_user_code').on(t.userId, t.code),
+}));
+
+// ── Programs ────────────────────────────────────────────────────────────────────
+
+// A user following a built-in multi-week program (lib/data/programs.js). Enrolling
+// creates ordinary routines (routines.program_enrollment_id) and a weekly schedule;
+// the week is counted from start_date. One active enrolment per user.
+export const programEnrollments = table('program_enrollments', {
+  id:            integer('id').primaryKey({ autoIncrement: true }),
+  userId:        integer('user_id').notNull(),
+  programCode:   text('program_code').notNull(),
+  startDate:     text('start_date').notNull(),
+  trainingMaxes: json('training_maxes'),                     // 5/3/1: { ohp, deadlift, bench, squat } in kg
+  endedAt:       integer('ended_at', { mode: 'timestamp' }),
+  createdAt:     integer('created_at', { mode: 'timestamp' }).default(now),
+}, (t) => ({
+  active: uniqueIndex('uidx_program_enrollments_active').on(t.userId).where(sql`ended_at IS NULL`),
 }));

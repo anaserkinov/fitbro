@@ -22,10 +22,16 @@ export const ENUMS = {
   baseUnit:      ['g', 'ml'],
   pose:          ['front', 'side', 'back'],
   reminderType:  ['meal', 'weigh_in', 'workout_day', 'missed_muscle', 'weekly_summary'],
+  challengeMetric: ['workouts', 'volume_kg', 'sets', 'active_days', 'exercise_reps'],
 };
 
 export function invalid(message, field) {
   throw new EndpointError(message, { code: 'INVALID_INPUT', field: field ?? null });
+}
+
+// Refusals that aren't about one input field.
+export function refuse(message, code, extra = {}) {
+  throw new EndpointError(message, { code, ...extra });
 }
 
 export function notFound(what) {

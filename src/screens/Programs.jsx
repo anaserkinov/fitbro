@@ -1,0 +1,108 @@
+import { useState } from 'react';
+import { useApi, call, invalidate, AFFECTS } from '../lib/api.js';
+import { useUser, useNav } from '../lib/app-state.jsx';
+import { Loader, Section, List, Row, Sheet, NumberInput, toastError } from '../ui/kit.jsx';
+import { haptic, confirmDialog } from '../lib/tg.js';
+import { t, cname } from '../lib/i18n.js';
+
+// Built-in multi-week programs: what you're following and the catalogue to enrol in.
+
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const LIFTS = [['squat', 'Back Squat'], ['bench', 'Barbell Bench Press'], ['deadlift', 'Deadlift'], ['ohp', 'Overhead Press']];
+const AFFECTS_PROGRAM = ['getMyProgram', 'listPrograms', ...AFFECTS.routines, 'listRoutines'];
+
+const length = (p) => (p.weeks ? t.n(p.weeks, '{n} week', '{n} weeks') : t('{n}-week waves', { n: p.cycleWeeks }));
+
+function EnrollSheet({ program, suggested, onClose }) {
+  const { fmt } = useUser();
+  const [maxes, setMaxes] = useState(() => Object.fromEntries((program.needsMaxes || []).map((k) => [k, suggested[k] ? fmt.wNum(suggested[k]) : null])));
+  const [busy, setBusy] = useState(false);
+  async function enroll() {
+    if (!(await confirmDialog(t('Start “{name}”? It replaces your weekly plan with the program’s days.', { name: t(program.name) })))) return;
+    setBusy(true);
+    try {
+      const oneRepMaxes = program.needsMaxes ? Object.fromEntries(Object.entries(maxes).filter(([, x]) => x).map(([k, x]) => [k, fmt.toKg(x)])) : undefined;
+      await call('enrollProgram', { code: program.code, ...(oneRepMaxes ? { oneRepMaxes } : {}) });
+      haptic.success();
+      invalidate(...AFFECTS_PROGRAM);
+      onClose();
+    } catch (e) { toastError(e); } finally { setBusy(false); }
+  }
+  return (
+    <Sheet open onClose={onClose} title={t(program.name)}>
+      <div className="stack" style={{ padding: '0 16px 16px' }}>
+        <span className="small">{t(program.about)}</span>
+        <List>
+          {Object.entries(program.schedule).map(([weekday, day]) => (
+            <Row key={weekday} title={`${t(DAY_NAMES[weekday - 1])} · ${t(program.days[day].name)}`} sub={program.days[day].exercises.map(cname).join(', ')} />
+          ))}
+        </List>
+        {program.needsMaxes && (
+          <>
+            <span className="label">{t('Your one-rep max ({unit})', { unit: fmt.weightLabel })}</span>
+            <span className="small hint">{t('Filled in from your recent sets. Training weights use 90% of it.')}</span>
+            {LIFTS.map(([k, name]) => (
+              <label key={k} className="form-row">
+                <span className="label">{cname(name)}</span>
+                <NumberInput value={maxes[k]} onCommit={(x) => setMaxes((m) => ({ ...m, [k]: x }))} live decimals={1} placeholder="—" label={cname(name)} />
+              </label>
+            ))}
+          </>
+        )}
+        <button type="button" className="btn lg block" disabled={busy} onClick={enroll}>{t('Start program')}</button>
+      </div>
+    </Sheet>
+  );
+}
+
+function Current({ my }) {
+  const nav = useNav();
+  async function leave() {
+    if (!(await confirmDialog(t('Leave “{name}”? Its routines are archived; your workouts stay.', { name: t(my.program.name) })))) return;
+    try {
+      await call('leaveProgram');
+      invalidate(...AFFECTS_PROGRAM);
+    } catch (e) { toastError(e); }
+  }
+  const progress = my.cycle
+    ? t('Wave {cycle} · week {week} of {of}', { cycle: my.cycle, week: my.week, of: my.of })
+    : t('Week {week} of {of}', { week: my.week, of: my.of });
+  return (
+    <Section title={t('Your program')} footer={my.deload ? t('A lighter week — let your body catch up.') : null}>
+      <List>
+        <Row icon="calendar" iconColor="#1E73BE" title={t(my.program.name)} sub={progress} value={my.deload ? t('Deload') : null} />
+        {my.routines.map((r) => (
+          <Row key={r.id} title={r.name} chevron onClick={() => nav.push('RoutineEditor', { id: r.id })} />
+        ))}
+      </List>
+      <button type="button" className="btn danger block" style={{ marginTop: 12 }} onClick={leave}>{t('Leave program')}</button>
+    </Section>
+  );
+}
+
+export default function Programs() {
+  const my = useApi('getMyProgram');
+  const list = useApi('listPrograms');
+  const [enrolling, setEnrolling] = useState(null);
+  return (
+    <div className="screen sub">
+      <h1 className="title" style={{ padding: '0 4px' }}>{t('Programs')}</h1>
+      <Loader q={my}>{(m) => (m.program ? <Current my={m} /> : null)}</Loader>
+      <Loader q={list}>
+        {(l) => (
+          <Section title={t('Programs')} footer={t('Each workout is pre-filled with that week’s sets and weights.')}>
+            <List>
+              {l.programs.map((p) => (
+                <Row key={p.code} icon="dumbbell" iconColor="#E8890C" title={t(p.name)}
+                  sub={[t.n(p.daysPerWeek, '{n} day a week', '{n} days a week'), length(p)].join(' · ')}
+                  value={l.activeCode === p.code ? t('Active') : null}
+                  chevron={!l.activeCode} onClick={l.activeCode ? undefined : () => setEnrolling(p)} />
+              ))}
+            </List>
+          </Section>
+        )}
+      </Loader>
+      {enrolling && <EnrollSheet program={enrolling} suggested={list.data.suggestedMaxes} onClose={() => setEnrolling(null)} />}
+    </div>
+  );
+}

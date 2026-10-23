@@ -1,5 +1,5 @@
 import { db } from 'sdk';
-import { eq, and, inArray } from 'sdk/db';
+import { eq, and, inArray, sql } from 'sdk/db';
 import { notFound } from './validate.js';
 
 // The row with this id owned by this user, or a NOT_FOUND error. Use it for every
@@ -35,3 +35,9 @@ export function fromUnix(sec) {
 }
 
 export const unix = (d) => Math.floor(d.getTime() / 1000);
+
+// Timestamp comparisons. The platform binds a Date in writes (insert/update values) but
+// not in a where clause — `lte(col, new Date())` throws "unsupported value type" — so
+// compare against unix seconds, which is how timestamp columns are stored.
+export const atOrBefore = (col, d) => sql`${col} <= ${unix(d)}`;
+export const atOrAfter = (col, d) => sql`${col} >= ${unix(d)}`;

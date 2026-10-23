@@ -6,7 +6,20 @@ import * as d from 'drizzle-orm/sqlite-core';
 import { sql, eq, ne, gt, gte, lt, lte, like, notLike, isNull, isNotNull, and, or, not, between, notBetween, inArray, notInArray, asc, desc, count, sum, avg, min, max, getTableColumns, is, SQL } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { DatabaseSync } from 'node:sqlite';
-export { sql, eq, ne, gt, gte, lt, lte, like, notLike, isNull, isNotNull, and, or, not, between, notBetween, inArray, notInArray, asc, desc, count, sum, avg, min, max };
+export { sql, like, notLike, isNull, isNotNull, and, or, not, notBetween, notInArray, asc, desc, count, sum, avg, min, max };
+
+// Like the platform: a Date can be written (insert/update values) but not compared in a
+// where clause ("db: unsupported value type: object"). Compare timestamps as unix seconds
+// (atOrBefore/atOrAfter in lib/db-util.js).
+const noDates = (name, op) => (...args) => {
+  if (args.slice(1).some((x) => x instanceof Date || (Array.isArray(x) && x.some((y) => y instanceof Date)))) {
+    throw new TypeError(`db: unsupported value type: object (Date passed to ${name})`);
+  }
+  return op(...args);
+};
+const eq_ = noDates('eq', eq), ne_ = noDates('ne', ne), gt_ = noDates('gt', gt), gte_ = noDates('gte', gte), lt_ = noDates('lt', lt), lte_ = noDates('lte', lte);
+const between_ = noDates('between', between), inArray_ = noDates('inArray', inArray);
+export { eq_ as eq, ne_ as ne, gt_ as gt, gte_ as gte, lt_ as lt, lte_ as lte, between_ as between, inArray_ as inArray };
 
 export const text = (n, o) => o?.mode === 'json' ? d.text(n, { mode: 'json' }) : d.text(n);
 export const integer = (n, o) => o?.mode ? d.integer(n, { mode: o.mode }) : d.integer(n);

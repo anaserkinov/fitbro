@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApi, mutate, AFFECTS } from '../lib/api.js';
 import { useUser, useNav } from '../lib/app-state.jsx';
 import { startOrResume } from '../lib/workout-start.js';
-import { Loader, Segmented, Chips, Sheet, Section, Empty, toast, toastError } from '../ui/kit.jsx';
+import { Loader, Segmented, Chips, Sheet, Section, Empty, toast, toastError, List, Row } from '../ui/kit.jsx';
 import { MuscleBadge, filterExercises, muscleFilters, exerciseMeta } from '../ui/ExercisePicker.jsx';
 import { Icon } from '../ui/icons.jsx';
 import { haptic } from '../lib/tg.js';
@@ -61,6 +61,12 @@ function Routines() {
                 </span>
               ))}
             </button>
+          </Section>
+
+          <Section>
+            <List>
+              <Row icon="calendar" iconColor="#1E73BE" title={t('Programs')} sub={t('Multi-week plans that set your weights for you')} chevron onClick={() => nav.push('Programs')} />
+            </List>
           </Section>
 
           <Section title={t('My routines')}>

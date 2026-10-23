@@ -151,6 +151,15 @@ export default function Home() {
                   <div><div style={{ fontSize: 19, fontWeight: 700 }}>{d.week.avgKcal ? fmt.e(d.week.avgKcal, { suffix: false }) : '—'}</div><div className="tiny hint">{t('Avg {unit}', { unit: fmt.energyUnit })}</div></div>
                 </div>
               </button>
+
+              <button type="button" className="card clickable" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }} onClick={() => nav.push('Friends')}>
+                <IconSquare name="users" color="#1E73BE" />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="bold" style={{ display: 'block' }}>{t('Friends')}</span>
+                  <span className="small hint">{t('Train together — compare your week with friends')}</span>
+                </span>
+                <Icon name="chevronRight" size={16} stroke={2.2} style={{ color: 'var(--hint)' }} />
+              </button>
             </>
           );
         }}

@@ -1,5 +1,6 @@
 import { translator, mergeDicts } from './core.js';
 import shared from './shared.js';
+import friends from './friends.js';
 
 // Chat bot and reminder strings. tr(user) → t for that user's language. See docs/i18n.md.
 
@@ -261,7 +262,7 @@ export const BOT = {
   },
 };
 
-const DICT = mergeDicts(shared, BOT);
+const DICT = mergeDicts(shared, friends, BOT);
 const cache = {};
 
 export function translatorFor(lang) {

@@ -1,22 +1,26 @@
 // handlers/message.js — every chat message. The chat is button-driven: the four
 // keyboard buttons, a plain number (= today's weight) or a photo (= progress photo).
-// Anything else gets a short hint pointing to the buttons and the app.
+// Anything else gets a short hint pointing to the buttons and the app. In group chats
+// only /leaderboard is answered (lib/bot/group-chat.js).
 
-import { ensureUser } from '../lib/users.js';
+import { ensureUser, markBotStarted } from '../lib/users.js';
 import { isEndpointError } from '../lib/validate.js';
 import { buttonOf, send, needsSetup } from '../lib/bot/ui.js';
 import { tr } from '../lib/i18n/bot.js';
 import * as chat from '../lib/bot/chat.js';
 import { workoutMenu } from '../lib/bot/workout.js';
+import { onGroupMessage } from '../lib/bot/group-chat.js';
 
 export default async function (message) {
+  if (message.chat.type === 'group' || message.chat.type === 'supergroup') return onGroupMessage(message);
   if (!message.from || message.from.is_bot || message.chat.type !== 'private') return;
   const chatId = message.chat.id;
-  const user = await ensureUser(message.from);
+  let user = await ensureUser(message.from);
+  if (!user.botStartedAt) user = await markBotStarted(user);   // pings and files can reach this chat
   const text = (message.text || '').trim();
 
   try {
-    if (text.startsWith('/start')) return await chat.start(user, chatId);
+    if (text.startsWith('/start')) return await chat.start(user, chatId, text.slice(6).trim());
     if (!user.onboardedAt) return await needsSetup(user, chatId);
     if (message.photo) return await chat.askPhotoPose(user, chatId, message.photo);
     const button = buttonOf(text);

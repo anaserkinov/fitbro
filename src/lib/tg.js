@@ -74,3 +74,26 @@ export function setBackButton(onBack) {
 
 export const mainButtonSupported = inTelegram && !!(tg && tg.MainButton);
 export const telegramUser = inTelegram ? tg.initDataUnsafe.user : null;
+
+// The `startapp` parameter of the link that opened the app (t.me/<bot>?startapp=…).
+export const startParam = (inTelegram && tg.initDataUnsafe.start_param)
+  || new URLSearchParams(window.location.search).get('tgWebAppStartParam') || null;
+
+// Opens Telegram's "share to chat" picker with a link and a line of text.
+export function shareLink(url, text) {
+  const share = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text || '')}`;
+  if (inTelegram && tg.openTelegramLink) tg.openTelegramLink(share);
+  else window.open(share, '_blank', 'noopener');
+}
+
+// Bot API 8.0+: share a message the bot prepared (savePreparedInlineMessage).
+export const canShareMessage = supports('8.0') && !!tg.shareMessage;
+export function shareMessage(id) {
+  return new Promise((resolve) => tg.shareMessage(id, (sent) => resolve(!!sent)));
+}
+
+// Lets the bot message the user (needed before it can send files to their chat).
+export function requestWriteAccess() {
+  if (!supports('6.9') || !tg.requestWriteAccess) return Promise.resolve(false);
+  return new Promise((resolve) => tg.requestWriteAccess((ok) => resolve(!!ok)));
+}

@@ -3,7 +3,7 @@ import { useApi, call, invalidate, AFFECTS } from '../lib/api.js';
 import { useUser, useNav } from '../lib/app-state.jsx';
 import { Loader, Section, List, Row, Sheet, Switch, Segmented, NumberInput, toast, toastError } from '../ui/kit.jsx';
 import { Icon } from '../ui/icons.jsx';
-import { haptic, confirmDialog } from '../lib/tg.js';
+import { haptic, confirmDialog, requestWriteAccess } from '../lib/tg.js';
 import { t } from '../lib/i18n.js';
 import { LANGUAGES, LANGUAGE_NAMES } from '../../tgcloud/lib/i18n/core.js';
 import { unitLabel } from '../../tgcloud/lib/units.js';
@@ -120,6 +120,20 @@ export default function Settings() {
     try { await call('updateReminder', { type: r.type, enabled }); } catch (e) { toastError(e); q.reload(); }
   }
 
+  async function exportAll() {
+    try {
+      let r;
+      try {
+        r = await call('exportData');
+      } catch (e) {
+        if (e.code !== 'BOT_CHAT_REQUIRED' || !(await requestWriteAccess())) throw e;
+        r = await call('exportData');
+      }
+      haptic.success();
+      toast(t.n(r.files.length, 'Sent {n} file to your chat', 'Sent {n} files to your chat'));
+    } catch (e) { toastError(e); }
+  }
+
   async function deleteAll() {
     if (!(await confirmDialog(t('Delete ALL your data — workouts, food, weight, photos, settings? This cannot be undone.')))) return;
     if (!(await confirmDialog(t('Are you sure? Everything will be permanently deleted.')))) return;
@@ -187,6 +201,11 @@ export default function Settings() {
               </List>
             </Section>
 
+            <Section title={t('Your data')} footer={t('The bot sends you CSV files — workouts, food, weight and measurements. Once an hour.')}>
+              <List>
+                <Row icon="arrowDown" iconColor="#23843F" title={t('Export my data')} onClick={exportAll} />
+              </List>
+            </Section>
             <button type="button" className="btn danger block" onClick={deleteAll}>{t('Delete all my data')}</button>
             <p className="center tiny hint">{t('FitPro · your data stays in this bot.')}</p>
           </>

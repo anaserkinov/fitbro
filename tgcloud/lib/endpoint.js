@@ -30,7 +30,6 @@ export function toWire(value) {
   return value;
 }
 
-// Refusals that aren't about one input field.
-export function refuse(message, code, extra = {}) {
-  throw new EndpointError(message, { code, ...extra });
-}
+// Refusals that aren't about one input field (defined in validate.js, which has no
+// imports, so lib modules can refuse without pulling in this module).
+export { refuse } from './validate.js';

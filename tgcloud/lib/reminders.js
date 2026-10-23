@@ -1,5 +1,6 @@
 import { db } from 'sdk';
-import { eq, and, lte, asc } from 'sdk/db';
+import { eq, and, asc } from 'sdk/db';
+import { atOrBefore } from './db-util.js';
 import * as T from '../schema.js';
 import { localDate, addDays, weekday, zonedToUtc } from './dates.js';
 import * as v from './validate.js';
@@ -82,7 +83,7 @@ export async function rescheduleAll(user) {
 
 export async function dueReminders(now = new Date(), limit = 100) {
   return db.select().from(R)
-    .where(and(eq(R.enabled, true), lte(R.nextRunAt, now)))
+    .where(and(eq(R.enabled, true), atOrBefore(R.nextRunAt, now)))
     .orderBy(asc(R.nextRunAt))
     .limit(limit)
     .all();

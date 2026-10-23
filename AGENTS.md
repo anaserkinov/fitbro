@@ -80,6 +80,10 @@ itself: the database, the Bot API, secrets.
   from the official `telegram-web-app.js` — it sends the init data; `err` has
   `message` (description), `type` (`'ENDPOINT_ERROR'` for your `EndpointError`)
   and `parameters`. Don't hand-roll `fetch` + init data.
+- **In this project** the Mini App reaches every call through one endpoint,
+  `endpoints/api.js` (`{ fn, input }`), because the platform caps modules per app. Add a
+  new call to `tgcloud/lib/api-routes.js` and `docs/endpoints.md` (a test checks they
+  match), not as a new endpoint file. Only `tick` and `adminSeed` are separate.
 - Names: letters, digits, `_`, not starting with a digit (`getProfile`).
   Scaffold with `npx tgcloud add endpoints/<name>`; test with
   `npx tgcloud run endpoints/<name> '{}' --ctx '{ initData: { user: { id: 1 } } }'`.

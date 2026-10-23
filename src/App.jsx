@@ -3,7 +3,7 @@ import { call } from './lib/api.js';
 import { UserProvider, NavProvider, useNav, useUser } from './lib/app-state.jsx';
 import { Icon } from './ui/icons.jsx';
 import { Spinner, ErrorBox, ToastHost } from './ui/kit.jsx';
-import { haptic } from './lib/tg.js';
+import { haptic, startParam } from './lib/tg.js';
 import { t } from './lib/i18n.js';
 
 import Onboarding from './screens/Onboarding.jsx';
@@ -22,6 +22,12 @@ import ExerciseDetail from './screens/ExerciseDetail.jsx';
 import ExerciseEditor from './screens/ExerciseEditor.jsx';
 import History from './screens/History.jsx';
 import Settings from './screens/Settings.jsx';
+import Friends from './screens/Friends.jsx';
+import Group from './screens/Group.jsx';
+import GroupSettings from './screens/GroupSettings.jsx';
+import GroupInvite from './screens/GroupInvite.jsx';
+import MemberRoutines from './screens/MemberRoutines.jsx';
+import Programs from './screens/Programs.jsx';
 
 const TABS = [
   { id: 'home', label: 'Today', icon: 'home', Screen: Home },
@@ -34,7 +40,23 @@ const TABS = [
 const SCREENS = {
   Workout, WorkoutSummary, FoodSearch, FoodEditor, RecipeEditor, RoutineEditor,
   ExerciseDetail, ExerciseEditor, History, Settings, ProfileEdit: Onboarding,
+  Friends, Group, GroupSettings, GroupInvite, MemberRoutines, Programs,
 };
+
+// Links into the app, followed once per session: an invite (t.me/<bot>?startapp=g_<code>)
+// opens the group preview; a bot button (MINI_APP_URL?group=<id>) opens that group.
+function useDeepLinks() {
+  const nav = useNav();
+  useEffect(() => {
+    let done = false;
+    try { done = sessionStorage.getItem('deeplink-done') === '1'; sessionStorage.setItem('deeplink-done', '1'); } catch { /* storage blocked */ }
+    if (done) return;
+    const code = (/^g_([a-z0-9]{8})$/.exec(startParam || '') || [])[1];
+    const groupId = Number(new URLSearchParams(window.location.search).get('group'));
+    if (code) nav.push('GroupInvite', { code });
+    else if (Number.isInteger(groupId) && groupId > 0) nav.push('Group', { groupId });
+  }, []);
+}
 
 function TabBar() {
   const nav = useNav();
@@ -56,6 +78,7 @@ function TabBar() {
 
 function Shell() {
   const nav = useNav();
+  useDeepLinks();
   if (nav.top) {
     const Screen = SCREENS[nav.top.screen];
     return (

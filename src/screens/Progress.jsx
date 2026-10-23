@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useApi } from '../lib/api.js';
 import { useNav } from '../lib/app-state.jsx';
 import { MUSCLE_LABEL } from '../lib/format.js';
-import { Segmented, Section, Sheet, Bar, Spinner, Empty } from '../ui/kit.jsx';
+import { Segmented, Section, Sheet, Bar, Spinner, Empty, List, Row } from '../ui/kit.jsx';
+import { ACHIEVEMENT_BY_CODE } from '../../tgcloud/lib/data/achievements.js';
 import { MuscleBadge } from '../ui/ExercisePicker.jsx';
 import { StrengthChart, RecordsList } from './ExerciseDetail.jsx';
 import { HistoryContent } from './History.jsx';
@@ -64,6 +65,30 @@ function Strength() {
   );
 }
 
+function Achievements() {
+  const q = useApi('getAchievements');
+  if (!q.data) return null;
+  const { achievements, earnedCount } = q.data;
+  return (
+    <Section title={t('Achievements · {n} of {total}', { n: earnedCount, total: achievements.length })}>
+      <div className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 12 }}>
+        {achievements.map((a) => {
+          const def = ACHIEVEMENT_BY_CODE[a.code];
+          const earned = !!a.earnedAt;
+          return (
+            <div key={a.code} className="center" style={{ opacity: earned ? 1 : 0.4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+              title={t(def.hint)} aria-label={`${t(def.title)}${earned ? '' : ` — ${t(def.hint)}`}`}>
+              <span style={{ fontSize: 32, filter: earned ? 'none' : 'grayscale(1)' }} aria-hidden="true">{def.icon}</span>
+              <span className="tiny" style={{ fontWeight: 600 }}>{t(def.title)}</span>
+              {!earned && <span className="tiny hint">{t(def.hint)}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
 export default function Progress() {
   const nav = useNav();
   const [tab, setTab] = useState('strength');
@@ -73,6 +98,12 @@ export default function Progress() {
       <Segmented label={t('Progress area')} value={tab} onChange={(v) => (v === 'body' ? nav.setTab('body') : setTab(v))}
         options={[{ value: 'strength', label: t('Strength') }, { value: 'body', label: t('Body') }, { value: 'consistency', label: t('Consistency') }]} />
       {tab === 'strength' ? <Strength /> : <HistoryContent />}
+      <Achievements />
+      <Section>
+        <List>
+          <Row icon="users" iconColor="#1E73BE" title={t('Friends')} sub={t('Leaderboards and challenges with your groups')} chevron onClick={() => nav.push('Friends')} />
+        </List>
+      </Section>
     </div>
   );
 }

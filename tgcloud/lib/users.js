@@ -1,10 +1,11 @@
 import { db } from 'sdk';
-import { eq, desc } from 'sdk/db';
+import { eq, desc, sql } from 'sdk/db';
 import * as T from '../schema.js';
 import { computeTargets } from './nutrition.js';
 import { localDate, isValidTimezone, ageOn } from './dates.js';
 import * as v from './validate.js';
 import { pickLanguage } from './i18n/core.js';
+import { leaveAllGroups } from './groups.js';
 
 // Users are keyed by Telegram user id. Every entry point (chat handler or Mini App
 // endpoint) calls ensureUser() with the Telegram `User` object it received.
@@ -106,8 +107,17 @@ export async function refreshTargets(user) {
   return { ...user, ...t };
 }
 
+// A new user has no history to backfill, so achievements count as evaluated from the
+// start — their first workout is announced, not silently granted (lib/achievements.js).
 export async function markOnboarded(userId) {
-  await db.update(T.users).set({ onboardedAt: new Date(), updatedAt: new Date() }).where(eq(T.users.id, userId));
+  const now = new Date();
+  await db.update(T.users).set({ onboardedAt: now, achievementsEvaluatedAt: now, updatedAt: now }).where(eq(T.users.id, userId));
+}
+
+export async function markBotStarted(user) {
+  const botStartedAt = new Date();
+  await db.update(T.users).set({ botStartedAt }).where(eq(T.users.id, user.id));
+  return { ...user, botStartedAt };
 }
 
 export async function setBotState(userId, state) {
@@ -116,6 +126,7 @@ export async function setBotState(userId, state) {
 
 // Every table that holds per-user rows. Children first — there are no cascades.
 const USER_TABLES = [
+  T.activityReactions, T.activities, T.userAchievements, T.programEnrollments,
   T.personalRecords, T.sets, T.workoutExercises, T.workouts,
   T.schedule, T.routineExercises, T.routines,
   T.foodLogs, T.waterLogs, T.favoriteFoods, T.recipeItems,
@@ -125,6 +136,11 @@ const USER_TABLES = [
 
 export async function deleteAllData(userId) {
   if (!Number.isInteger(userId) || userId <= 0) throw new Error('deleteAllData: bad user id');
+  await leaveAllGroups(userId);   // first: ownership moves to another member
+  // Challenges they created stay with the group, now under its (new) owner.
+  await db.run(sql`UPDATE challenges SET created_by = (SELECT owner_id FROM groups WHERE groups.id = challenges.group_id) WHERE created_by = ${userId}`);
+  // Others' reactions on this user's feed items; the user's own rows go below.
+  await db.run(sql`DELETE FROM activity_reactions WHERE activity_id IN (SELECT id FROM activities WHERE user_id = ${userId})`);
   for (const t of USER_TABLES) {
     await db.delete(t).where(eq(t.userId, userId)).run();
   }

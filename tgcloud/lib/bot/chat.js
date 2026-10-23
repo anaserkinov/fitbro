@@ -7,6 +7,8 @@ import { logWater, undoWater } from '../food.js';
 import { toKg, fromKg, formatWeight, formatEnergy, unitLabel, thousands } from '../units.js';
 import { tr, longDate } from '../i18n/bot.js';
 import { send, edit, inline, appButton, esc, mainKeyboard } from './ui.js';
+import { sendInvitePreview } from './friends.js';
+import { inviteCodeOf } from '../links.js';
 
 const signed = (v, lang) => (v > 0 ? `+${thousands(v, 1, lang).replace(/[.,]0$/, '')}` : v < 0 ? `−${thousands(-v, 1, lang).replace(/[.,]0$/, '')}` : '±0');
 // A kg difference shown in the user's unit, e.g. '−0.5 kg'.
@@ -25,7 +27,12 @@ export async function setMenuButton(user, chatId) {
   await api.setChatMenuButton({ chat_id: chatId, menu_button: { type: 'web_app', text: tr(user)('Open app'), web_app: { url: MINI_APP_URL } } });
 }
 
-export async function start(user, chatId) {
+// `payload` is what follows /start — an invite link brings 'g_<code>'. A user who is
+// set up sees the group straight away; anyone else gets it after onboarding.
+export async function start(user, chatId, payload = '') {
+  const code = inviteCodeOf(payload);
+  if (code && user.onboardedAt) return sendInvitePreview(user, chatId, code);
+  if (code) await setBotState(user.id, { ...(user.botState || {}), pendingInvite: code });
   const t = tr(user);
   if (MINI_APP_URL) {
     try {
