@@ -85,6 +85,12 @@ export default function ExercisePicker({ open, onClose, onPick, title }) {
     setDraft({ name, muscle: muscle === 'all' ? 'chest' : muscle, equipment: 'barbell', category: 'compound', trackType: 'weight_reps' });
   };
   const close = () => { setDraft(null); onClose(); };
+  const rows = useMemo(() => {
+    if (!q.data) return [];
+    const list = filterExercises(q.data.exercises, text, muscle);
+    if (!text) list.sort((a, b) => (b.lastUsedAt ? new Date(b.lastUsedAt) : 0) - (a.lastUsedAt ? new Date(a.lastUsedAt) : 0));
+    return list.slice(0, 60);
+  }, [q.data, text, muscle]);
 
   if (draft) {
     return (
@@ -94,12 +100,6 @@ export default function ExercisePicker({ open, onClose, onPick, title }) {
       </Sheet>
     );
   }
-  const rows = useMemo(() => {
-    if (!q.data) return [];
-    const list = filterExercises(q.data.exercises, text, muscle);
-    if (!text) list.sort((a, b) => (b.lastUsedAt ? new Date(b.lastUsedAt) : 0) - (a.lastUsedAt ? new Date(a.lastUsedAt) : 0));
-    return list.slice(0, 60);
-  }, [q.data, text, muscle]);
 
   return (
     <Sheet open={open} onClose={close} title={title || t('Add exercise')} gray>
@@ -112,11 +112,11 @@ export default function ExercisePicker({ open, onClose, onPick, title }) {
       {!q.data ? <Spinner /> : (
         <>
           {!rows.length && <Empty>{t('No exercises match.')}</Empty>}
-          {name && !exact && (
+          {!exact && (
             <div className="list" style={{ marginBottom: rows.length ? 12 : 0 }}>
               <button type="button" className="row" style={{ minHeight: 56 }} onClick={startCreate}>
                 <Icon name="plus" size={20} color="var(--link)" stroke={2.4} />
-                <span className="grow row-title" style={{ color: 'var(--link)' }}>{t('Create “{name}”', { name })}</span>
+                <span className="grow row-title" style={{ color: 'var(--link)' }}>{name ? t('Create “{name}”', { name }) : t('New exercise')}</span>
               </button>
             </div>
           )}
