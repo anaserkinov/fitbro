@@ -54,6 +54,12 @@ function MacroLine({ n, fmt }) {
   );
 }
 
+// Where a built-in category's numbers come from (translation keys).
+export const SOURCE_NOTE = {
+  fast_food: 'Values from USDA FoodData Central (US menus).',
+  uzbek: 'An estimate from a typical home recipe. Make your own version to match yours.',
+};
+
 // Log a food (food given) or edit an existing entry (log given).
 export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal, onSaved, onEditFood }) {
   const { fmt } = useUser();
@@ -113,11 +119,22 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
     } catch (e) { toastError(e); }
   }
 
+  // A shared food can't be edited; this gives the user their own copy to change.
+  async function makeOwn() {
+    setBusy(true);
+    try {
+      const r = await call('makeOwnFood', { id: base.id });
+      haptic.success();
+      onEditFood(r.food);
+    } catch (e) { toastError(e); } finally { setBusy(false); }
+  }
+
   if (!open) return null;
   const title = cname(base ? base.name : log ? log.name : '');
   return (
     <Sheet open={open} onClose={onClose} title={title}>
       {base && <p className="small hint" style={{ marginTop: -10 }}>{foodSubtitle(base, fmt)}</p>}
+      {base && SOURCE_NOTE[base.category] && <p className="tiny hint" style={{ marginTop: -6 }}>{t(SOURCE_NOTE[base.category])}</p>}
       {isQuick ? (
         <div className="grid2">
           <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">{t('Name')}</span>
@@ -145,6 +162,7 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
         {(base || isQuick) && <button type="button" className="btn lg block" disabled={busy || (base && !(qty > 0))} onClick={save}>{editing ? t('Save') : t('Add')}</button>}
         {editing && <button type="button" className="btn danger block" style={{ background: 'var(--field)' }} onClick={remove}>{t('Remove entry')}</button>}
         {base && base.custom && onEditFood && <button type="button" className="btn ghost" onClick={() => onEditFood(base)}>{t('Edit this food')}</button>}
+        {base && !base.custom && onEditFood && <button type="button" className="btn ghost" disabled={busy} onClick={makeOwn}>{t('Make my own version')}</button>}
       </div>
     </Sheet>
   );

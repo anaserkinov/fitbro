@@ -79,6 +79,7 @@ The app converts to the user's `weightUnit` / `energyUnit` for display.
 | `updateFoodLog` | `id` + `quantity?, unit?, meal?, date?` (quick adds: also `kcal, proteinG, …`) | `{ log, day }` |
 | `deleteFoodLog` | `id` | `{ day }` |
 | `copyFood` | `fromDate, toDate?, meal?, toMeal?` | `{ copied, day }` |
+| `makeOwnFood` | `id` (a built-in or Open Food Facts food) | `{ food, items }` — the user's editable copy, named in their language: an Uzbek dish becomes a recipe with its ingredients, anything else a custom food |
 | `saveFood` | custom food: `id?, name, baseUnit, kcalPer100, proteinPer100, carbsPer100, fatPer100, brand?, barcode?, servingLabel?, servingGrams?, …` | `{ food, items }` |
 | `saveRecipe` | `id?, name, items: [{ foodId, grams }], servingLabel?, servingGrams?` | `{ food, items }` |
 | `archiveFood` | `id` | `{ ok }` |

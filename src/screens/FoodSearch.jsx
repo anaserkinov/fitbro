@@ -3,7 +3,7 @@ import { useApi, call, invalidate } from '../lib/api.js';
 import { useUser, useNav } from '../lib/app-state.jsx';
 import { MEAL_LABEL } from '../lib/format.js';
 import { Section, Spinner, Empty, ErrorBox, toastError } from '../ui/kit.jsx';
-import { FoodLogSheet, QuickAddSheet, BarcodeSheet, foodSubtitle } from '../ui/food.jsx';
+import { FoodLogSheet, QuickAddSheet, BarcodeSheet, foodSubtitle, SOURCE_NOTE } from '../ui/food.jsx';
 import { Icon } from '../ui/icons.jsx';
 import { haptic } from '../lib/tg.js';
 import { t, cname } from '../lib/i18n.js';
@@ -20,6 +20,8 @@ const GROUPS = [
   { id: 'vegetables', emoji: '🥦', label: 'Vegetables' },
   { id: 'fats_sweets', emoji: '🥜', label: 'Nuts, oils & sweets' },
   { id: 'drinks', emoji: '🥤', label: 'Drinks' },
+  { id: 'fast_food', emoji: '🍔', label: 'Fast food' },
+  { id: 'uzbek', emoji: '🫓', label: 'Uzbek dishes' },
 ];
 
 function useDebounced(value, ms) {
@@ -97,7 +99,7 @@ export default function FoodSearch({ date, meal, scan = false }) {
 
       {q.error ? <ErrorBox error={q.error} onRetry={q.reload} /> : !results ? <Spinner /> : browsing ? (
         results.foods?.length ? (
-          <Section title={t(GROUPS.find((g) => g.id === group).label)}><div className="list">{results.foods.map((f) => <FoodRow key={f.id} f={f} />)}</div></Section>
+          <Section title={t(GROUPS.find((g) => g.id === group).label)} footer={SOURCE_NOTE[group] ? t(SOURCE_NOTE[group]) : null}><div className="list">{results.foods.map((f) => <FoodRow key={f.id} f={f} />)}</div></Section>
         ) : group === 'mine' ? (
           <Empty action={<button type="button" className="btn soft" onClick={() => nav.push('FoodEditor', {})}>{t('New food')}</button>}>{t('You haven’t created any foods yet.')}</Empty>
         ) : group === 'recipes' ? (
@@ -119,7 +121,7 @@ export default function FoodSearch({ date, meal, scan = false }) {
       )}
 
       <FoodLogSheet open={!!picked} food={picked} date={date} meal={meal} onClose={() => setPicked(null)}
-        onSaved={() => nav.pop()} onEditFood={(f) => { setPicked(null); nav.push(f.source === 'recipe' ? 'RecipeEditor' : 'FoodEditor', { id: f.id }); }} />
+        onSaved={() => nav.pop()} onEditFood={(f) => { setPicked(null); invalidate('searchFoods', 'browseFoods'); nav.push(f.source === 'recipe' ? 'RecipeEditor' : 'FoodEditor', { id: f.id }); }} />
       <QuickAddSheet open={quick} date={date} meal={meal} onClose={() => setQuick(false)} onSaved={() => nav.pop()} />
       <BarcodeSheet open={barcode} onClose={() => setBarcode(false)}
         onFound={(f) => { setBarcode(false); setPicked(f); }}

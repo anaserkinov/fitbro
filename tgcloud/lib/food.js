@@ -7,7 +7,8 @@ import { today } from './users.js';
 import { gramsFor, nutrientsFor, sumNutrients, recipePer100 } from './nutrition.js';
 import { lookupBarcode as offLookup, cleanBarcode } from './openfoodfacts.js';
 import { catalogName, catalogSearch } from './i18n/catalog.js';
-import { FOOD_CATEGORIES, BUILTIN_FOOD_CATEGORY } from './data/foods.js';
+import { FOOD_CATEGORIES, BUILTIN_FOOD_CATEGORY, BUILTIN_FOODS, DISH_BY_NAME } from './data/foods.js';
+import { seedCatalog } from './catalog.js';
 
 const F = T.foods, FL = T.foodLogs, WL = T.waterLogs, FAV = T.favoriteFoods, RI = T.recipeItems;
 // In order of the day. 'snack' is the evening one (it predates the other two).
@@ -65,9 +66,20 @@ function inGroup(f, group) {
 
 const browseGroup = (x, k) => (BROWSE.includes(x) ? x : v.invalid(`${k} must be one of: ${BROWSE.join(', ')}`, k));
 
+// Built-in foods added since the catalogue was seeded go in on first use: checked once
+// per isolate, by count.
+let catalogChecked = false;
+async function ensureCatalog() {
+  if (catalogChecked) return;
+  const have = await db.$count(F, and(eq(F.userId, 0), eq(F.source, 'builtin')));
+  if (have < BUILTIN_FOODS.length) await seedCatalog();
+  catalogChecked = true;
+}
+
 // Every food in one group, by name in the user's language.
 export async function browseFoods(user, input = {}) {
   const group = browseGroup(input.category, 'category');
+  await ensureCatalog();
   const favs = await favoriteIds(user.id);
   const live = isNull(F.archivedAt);
   const where = group === 'mine' ? and(live, eq(F.userId, user.id), eq(F.source, 'custom'))
@@ -82,6 +94,7 @@ export async function browseFoods(user, input = {}) {
 export async function searchFoods(user, input = {}) {
   const q = v.str(input.q, 'q', { max: 60, optional: true });
   const group = input.category == null ? null : browseGroup(input.category, 'category');
+  if (q) await ensureCatalog();
   const favs = await favoriteIds(user.id);
   const mark = (f) => ({ ...f, category: categoryOf(f), favorite: favs.has(f.id), custom: f.userId !== 0 });
   const live = and(inArray(F.userId, [0, user.id]), isNull(F.archivedAt));
@@ -282,6 +295,31 @@ export async function saveRecipe(user, input) {
   }
   await db.insert(RI).values(items.map((it, position) => ({ userId: user.id, recipeId, foodId: it.foodId, grams: it.grams, position }))).run();
   return getFood(user, { id: recipeId });
+}
+
+// The user's own, editable copy of a shared food, named in their language. An Uzbek
+// dish becomes a recipe with its ingredients — the same numbers until they change
+// them; any other food becomes a custom food. Returns it like getFood.
+export async function makeOwnFood(user, input) {
+  const food = await visible(F, v.id(input.id), user.id, 'Food');
+  if (food.userId !== 0) v.invalid('This food is already yours', 'id');
+  const name = (food.source === 'builtin' ? catalogName(user.language, food.name) : food.name).slice(0, 120);
+  const dish = food.source === 'builtin' ? DISH_BY_NAME[food.name] : null;
+  if (dish) {
+    await ensureCatalog();
+    const names = dish.items.map(([n]) => n);
+    const rows = await db.select({ id: F.id, name: F.name }).from(F)
+      .where(and(eq(F.userId, 0), eq(F.source, 'builtin'), isNull(F.archivedAt), inArray(F.name, names))).all();
+    const ids = new Map(rows.map((r) => [r.name, r.id]));
+    if (names.every((n) => ids.has(n))) {
+      return saveRecipe(user, { name, servingLabel: dish.servingLabel, servingGrams: dish.servingGrams, items: dish.items.map(([n, grams]) => ({ foodId: ids.get(n), grams })) });
+    }
+  }
+  const copy = { name, baseUnit: food.baseUnit };
+  for (const k of ['brand', 'kcalPer100', 'proteinPer100', 'carbsPer100', 'fatPer100', 'fiberPer100', 'sugarPer100', 'servingLabel', 'servingGrams']) {
+    if (food[k] !== null && food[k] !== undefined) copy[k] = food[k];
+  }
+  return saveFood(user, copy);
 }
 
 export async function archiveFood(user, input) {

@@ -12,7 +12,7 @@ import { deletePhoto, deleteWeight, getBody, getPhoto, logMeasurements, logWeigh
 import { createChallenge, deleteChallenge, listChallenges } from './challenges.js';
 import { archiveExercise, getExerciseHistory, listExercises, saveExercise } from './exercises.js';
 import { exportData } from './export.js';
-import { archiveFood, browseFoods, copyFood, deleteFoodLog, getFood, getFoodDay, logFood, logWater, lookupBarcode, saveFood, saveRecipe, searchFoods, setFavoriteFood, undoWater, updateFoodLog } from './food.js';
+import { archiveFood, browseFoods, copyFood, deleteFoodLog, getFood, getFoodDay, logFood, logWater, lookupBarcode, makeOwnFood, saveFood, saveRecipe, searchFoods, setFavoriteFood, undoWater, updateFoodLog } from './food.js';
 import { createGroup, joinGroup, leaveGroup, listGroups, previewGroup, removeMember, resetInvite, updateGroup, updateMembership } from './groups.js';
 import { getGroup } from './leaderboard.js';
 import { enrollProgram, getMyProgram, leaveProgram, listPrograms } from './programs.js';
@@ -76,6 +76,7 @@ export const ROUTES = {
   logWater: endpoint(logWater),
   logWeight: endpoint(logWeight),
   lookupBarcode: endpoint(lookupBarcode),
+  makeOwnFood: endpoint(makeOwnFood),
   prepareShare: endpoint(prepareShare, ONBOARDED),
   previewGroup: endpoint(previewGroup, ONBOARDED),
   react: endpoint(react, ONBOARDED),

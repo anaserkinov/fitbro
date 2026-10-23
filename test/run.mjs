@@ -159,6 +159,29 @@ console.log('Program slots and templates');
   assert.equal(ul.prescribe(ul.days[0].exercises[0], { state: { workingKg: 80 }, weekIndex: 4 }).length, 2); assert.equal(ul.advance(ul.days[0].exercises[0], { workingKg: 80, source: 'history' }, [], { weekIndex: 4 }), null); ok('upper/lower: every 5th week is a deload');
 }
 
+console.log('Food catalogue');
+{
+  const { BUILTIN_FOODS, BUILTIN_FOOD_CATEGORY, DISHES } = await import('../tgcloud/lib/data/foods.js');
+  const { CATALOG } = await import('../tgcloud/lib/i18n/catalog.js');
+  const APP_FOOD = (await import('../src/i18n/food.js')).default;
+  const byName = new Map(BUILTIN_FOODS.map((f) => [f.name, f]));
+  const names = BUILTIN_FOODS.map((f) => f.name.toLowerCase());
+  assert.deepEqual(names.filter((n, i) => names.indexOf(n) !== i), []); ok('built-in food names are unique (seeding matches by name)');
+  assert.deepEqual(DISHES.flatMap(([, , , items]) => items.map(([n]) => n)).filter((n) => !byName.has(n)), []); ok('every dish ingredient is a built-in food');
+  for (const [name, , , items] of DISHES) {
+    assert.deepEqual(nutrition.recipePer100(items.map(([n, grams]) => ({ food: byName.get(n), grams }))),
+      (({ kcalPer100, proteinPer100, carbsPer100, fatPer100 }) => ({ kcalPer100, proteinPer100, carbsPer100, fatPer100 }))(byName.get(name)), name);
+  }
+  ok('dish values = the recipe maths on their ingredients (a copied recipe matches)');
+  const fresh = Object.keys(BUILTIN_FOOD_CATEGORY).filter((n) => ['fast_food', 'uzbek'].includes(BUILTIN_FOOD_CATEGORY[n]));
+  const missing = [];
+  for (const l of ['ru', 'uz']) {
+    for (const n of fresh) if (!CATALOG[l][n]) missing.push(`${l} name: ${n}`);
+    for (const f of BUILTIN_FOODS) if (f.servingLabel && !APP_FOOD[l][f.servingLabel]) missing.push(`${l} serving: ${f.servingLabel}`);
+  }
+  assert.deepEqual([...new Set(missing)], []); ok('new foods and every serving label have ru and uz');
+}
+
 console.log('Catalog');
 let r = await catalog.seedCatalog(); assert.ok(r.exercisesAdded > 80 && r.foodsAdded > 60); ok(`seeded ${r.exercisesAdded} exercises, ${r.foodsAdded} foods`);
 r = await catalog.seedCatalog(); assert.deepEqual(r, { exercisesAdded: 0, foodsAdded: 0 }); ok('re-seed is a no-op');
