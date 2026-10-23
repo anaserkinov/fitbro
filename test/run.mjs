@@ -167,8 +167,11 @@ console.log('Food catalogue');
   const byName = new Map(BUILTIN_FOODS.map((f) => [f.name, f]));
   const names = BUILTIN_FOODS.map((f) => f.name.toLowerCase());
   assert.deepEqual(names.filter((n, i) => names.indexOf(n) !== i), []); ok('built-in food names are unique (seeding matches by name)');
-  assert.deepEqual(DISHES.flatMap(([, , , items]) => items.map(([n]) => n)).filter((n) => !byName.has(n)), []); ok('every dish ingredient is a built-in food');
-  for (const [name, , , items] of DISHES) {
+  const { RETIRED_FOODS } = await import('../tgcloud/lib/data/foods.js');
+  assert.deepEqual(RETIRED_FOODS.filter((n) => byName.has(n)), []);
+  assert.deepEqual(names.filter((n) => /pork|bacon|ham\b|pepperoni|sausage|salami|lard/.test(n)), []); ok('no pork: retired foods are gone from the catalogue');
+  assert.deepEqual(DISHES.flatMap(([, , , , items]) => items.map(([n]) => n)).filter((n) => !byName.has(n)), []); ok('every dish ingredient is a built-in food');
+  for (const [name, , , , items] of DISHES) {
     assert.deepEqual(nutrition.recipePer100(items.map(([n, grams]) => ({ food: byName.get(n), grams }))),
       (({ kcalPer100, proteinPer100, carbsPer100, fatPer100 }) => ({ kcalPer100, proteinPer100, carbsPer100, fatPer100 }))(byName.get(name)), name);
   }

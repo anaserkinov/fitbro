@@ -11,6 +11,8 @@ import { t, cname } from '../lib/i18n.js';
 // Browse groups (server: BROWSE in lib/food.js). Labels are translation keys.
 const GROUPS = [
   { id: 'mine', emoji: '✏️', label: 'My foods' },
+  { id: 'uzbek', emoji: '🫓', label: 'Uzbek dishes' },
+  { id: 'fast_food', emoji: '🍔', label: 'Fast food' },
   { id: 'recipes', emoji: '🍲', label: 'Recipes' },
   { id: 'meat_fish', emoji: '🍗', label: 'Meat & fish' },
   { id: 'dairy', emoji: '🥚', label: 'Eggs & dairy' },
@@ -20,8 +22,6 @@ const GROUPS = [
   { id: 'vegetables', emoji: '🥦', label: 'Vegetables' },
   { id: 'fats_sweets', emoji: '🥜', label: 'Nuts, oils & sweets' },
   { id: 'drinks', emoji: '🥤', label: 'Drinks' },
-  { id: 'fast_food', emoji: '🍔', label: 'Fast food' },
-  { id: 'uzbek', emoji: '🫓', label: 'Uzbek dishes' },
 ];
 
 function useDebounced(value, ms) {

@@ -54,9 +54,10 @@ const SOURCE_RANK = { custom: 0, recipe: 0, builtin: 1, off: 2 };
 // No query: recent and favourite foods. With a query: name matches, the user's own
 // foods first, then names that start with the query, then shorter names.
 // Browse groups: the built-in categories plus the user's own foods and recipes.
-export const BROWSE = ['mine', 'recipes', ...FOOD_CATEGORIES];
+export const BROWSE = ['mine', 'uzbek', 'fast_food', 'recipes', ...FOOD_CATEGORIES.filter((c) => c !== 'uzbek' && c !== 'fast_food')];
 
 const categoryOf = (f) => (f.source === 'builtin' ? BUILTIN_FOOD_CATEGORY[f.name] ?? null : null);
+const isDish = (f) => f.source === 'builtin' && !!DISH_BY_NAME[f.name];   // an estimate from a recipe
 
 function inGroup(f, group) {
   if (group === 'mine') return f.source === 'custom';
@@ -66,13 +67,13 @@ function inGroup(f, group) {
 
 const browseGroup = (x, k) => (BROWSE.includes(x) ? x : v.invalid(`${k} must be one of: ${BROWSE.join(', ')}`, k));
 
-// Built-in foods added since the catalogue was seeded go in on first use: checked once
-// per isolate, by count.
+// Built-in foods added or retired since the catalogue was seeded are applied on first
+// use: checked once per isolate, by counting the live ones.
 let catalogChecked = false;
 async function ensureCatalog() {
   if (catalogChecked) return;
-  const have = await db.$count(F, and(eq(F.userId, 0), eq(F.source, 'builtin')));
-  if (have < BUILTIN_FOODS.length) await seedCatalog();
+  const live = await db.$count(F, and(eq(F.userId, 0), eq(F.source, 'builtin'), isNull(F.archivedAt)));
+  if (live !== BUILTIN_FOODS.length) await seedCatalog();
   catalogChecked = true;
 }
 
@@ -88,7 +89,7 @@ export async function browseFoods(user, input = {}) {
   const shown = (f) => (f.source === 'builtin' ? catalogName(user.language, f.name) : f.name);
   const rows = (await db.select().from(F).where(where).all())
     .sort((a, b) => shown(a).localeCompare(shown(b), user.language));
-  return { category: group, foods: rows.map((f) => ({ ...f, category: categoryOf(f), favorite: favs.has(f.id), custom: f.userId !== 0 })) };
+  return { category: group, foods: rows.map((f) => ({ ...f, category: categoryOf(f), dish: isDish(f), favorite: favs.has(f.id), custom: f.userId !== 0 })) };
 }
 
 export async function searchFoods(user, input = {}) {
@@ -96,7 +97,7 @@ export async function searchFoods(user, input = {}) {
   const group = input.category == null ? null : browseGroup(input.category, 'category');
   if (q) await ensureCatalog();
   const favs = await favoriteIds(user.id);
-  const mark = (f) => ({ ...f, category: categoryOf(f), favorite: favs.has(f.id), custom: f.userId !== 0 });
+  const mark = (f) => ({ ...f, category: categoryOf(f), dish: isDish(f), favorite: favs.has(f.id), custom: f.userId !== 0 });
   const live = and(inArray(F.userId, [0, user.id]), isNull(F.archivedAt));
 
   if (!q) {

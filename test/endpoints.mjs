@@ -2,7 +2,7 @@
 // Runs after run.mjs (tables exist, catalogue seeded).
 import assert from 'node:assert/strict';
 import { db } from './shim/sdk.js';
-import { eq } from './shim/sdk-db.js';
+import { eq, and, isNotNull } from './shim/sdk-db.js';
 import * as T from '../tgcloud/schema.js';
 import { endpointFn } from './call.mjs';
 import { localDate, addDays, weekday } from '../tgcloud/lib/dates.js';
@@ -170,6 +170,16 @@ const fast = (await call('browseFoods', { category: 'fast_food' })).foods;
 const bigMac = fast.find((f) => f.name === "McDonald's Big Mac");
 assert.ok(fast.length >= 50); assert.deepEqual([bigMac.kcalPer100, bigMac.servingLabel, bigMac.servingGrams], [257, '1 burger', 219]); ok('fast food: real chain items with their serving');
 assert.equal((await find('big mac'))[0].id, bigMac.id); ok('search finds them');
+const shawarma = fast.find((f) => f.name === 'Shawarma (chicken)');
+assert.equal(shawarma.dish, true); assert.equal(bigMac.dish, false); assert.equal(shawarma.servingLabel, '1 wrap'); ok('shawarma and lavash: estimates in fast food, marked as dishes');
+{
+  // A bot seeded before pork was taken out still has these rows.
+  const { seedCatalog } = await import('../tgcloud/lib/catalog.js');
+  await db.insert(T.foods).values([{ userId: 0, source: 'builtin', name: 'Bacon, cooked', kcalPer100: 541 }, { userId: 0, source: 'builtin', name: "Domino's Pepperoni pizza", kcalPer100: 273 }]).run();
+  await seedCatalog();
+  assert.deepEqual(await find('bacon'), []); assert.deepEqual(await find('pepperoni'), []);
+  assert.equal(await db.$count(T.foods, and(eq(T.foods.name, 'Bacon, cooked'), isNotNull(T.foods.archivedAt))), 1); ok('pork foods already in the database are archived on seed');
+}
 const uz = (await call('browseFoods', { category: 'uzbek' })).foods;
 const plov = uz.find((f) => f.name === 'Plov');
 assert.ok(uz.length >= 13); assert.ok(plov.kcalPer100 > 170 && plov.kcalPer100 < 190); ok('Uzbek dishes: plov about 180 kcal per 100 g');

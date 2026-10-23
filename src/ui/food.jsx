@@ -56,9 +56,12 @@ function MacroLine({ n, fmt }) {
 
 // Where a built-in category's numbers come from (translation keys).
 export const SOURCE_NOTE = {
-  fast_food: 'Values from USDA FoodData Central (US menus).',
+  fast_food: 'Chain items: values from USDA FoodData Central (US menus). Shawarma and lavash: estimates from a typical recipe.',
   uzbek: 'An estimate from a typical home recipe. Make your own version to match yours.',
 };
+const ESTIMATE_NOTE = 'An estimate from a typical home recipe. Make your own version to match yours.';
+const CHAIN_NOTE = 'Values from USDA FoodData Central (US menus).';
+const noteFor = (food) => (food.dish ? ESTIMATE_NOTE : food.category === 'fast_food' ? CHAIN_NOTE : null);
 
 // Log a food (food given) or edit an existing entry (log given).
 export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal, onSaved, onEditFood }) {
@@ -134,7 +137,7 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
   return (
     <Sheet open={open} onClose={onClose} title={title}>
       {base && <p className="small hint" style={{ marginTop: -10 }}>{foodSubtitle(base, fmt)}</p>}
-      {base && SOURCE_NOTE[base.category] && <p className="tiny hint" style={{ marginTop: -6 }}>{t(SOURCE_NOTE[base.category])}</p>}
+      {base && noteFor(base) && <p className="tiny hint" style={{ marginTop: -6 }}>{t(noteFor(base))}</p>}
       {isQuick ? (
         <div className="grid2">
           <label className="form-row" style={{ gridColumn: '1 / -1' }}><span className="label">{t('Name')}</span>

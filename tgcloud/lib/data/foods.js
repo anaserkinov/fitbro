@@ -17,8 +17,6 @@ const ROWS = [
   ['Turkey breast, cooked',        'g', 135, 30,   0,    1,    null, null],
   ['Ground beef 90/10, cooked',    'g', 217, 26,   0,    11.7, null, null],
   ['Beef sirloin steak, cooked',   'g', 206, 29,   0,    9,    null, null],
-  ['Pork loin, cooked',            'g', 197, 27,   0,    9,    null, null],
-  ['Bacon, cooked',                'g', 541, 37,   1.4,  42,   '1 slice', 8],
   ['Salmon, cooked',               'g', 206, 22,   0,    12,   null, null],
   ['Tuna, canned in water',        'g', 116, 26,   0,    0.8,  '1 can (drained)', 120],
   ['Cod, cooked',                  'g', 105, 23,   0,    0.9,  null, null],
@@ -90,6 +88,7 @@ const ROWS = [
   ['Carrots, cooked',              'g', 35,  0.8,  8.2,  0.2,  null, null, { fdc: 170394 }],
   ['Onion, cooked',                'g', 44,  1.4,  10.2, 0.2,  null, null, { fdc: 170001 }],
   ['Cabbage, cooked',              'g', 23,  1.3,  5.5,  0.1,  null, null, { fdc: 169976 }],
+  ['Cabbage, raw',                 'g', 25,  1.3,  5.8,  0.1,  null, null, { fdc: 169975 }],
   ['Radish (daikon)',              'g', 18,  0.6,  4.1,  0.1,  null, null, { fdc: 168451 }],
 
   'fats_sweets',   // Nuts, fats & sweets
@@ -101,6 +100,8 @@ const ROWS = [
   ['Honey',                        'g', 304, 0.3,  82,   0,    '1 tbsp', 21],
   ['Dark chocolate 70–85%',        'g', 598, 7.8,  46,   43,   '1 square', 10],
   ['Cottonseed oil',               'g', 884, 0,    0,    100,  null, null, { fdc: 171024 }],
+  ['Mayonnaise',                   'g', 680, 1,    0.6,  74.8, '1 tbsp', 14, { fdc: 171009 }],
+  ['Ketchup',                      'g', 101, 1,    27.4, 0.1,  '1 tbsp', 15, { fdc: 168556 }],
 
   'drinks',        // Drinks
   ['Orange juice',                 'ml', 45, 0.7,  10.4, 0.2,  '1 glass', 250],
@@ -119,7 +120,6 @@ const ROWS = [
   ["McDonald's McChicken",                       'g', 273, 10.4, 28,   13.2, '1 burger', 131, { fiber: 1.3, sugar: 3.6, fdc: 173305 }],
   ["McDonald's Chicken McNuggets",               'g', 302, 15.8, 15.1, 19.8, '6 pieces', 95, { fiber: null, sugar: 0.1, fdc: 173297 }],
   ["McDonald's French fries",                    'g', 323, 3.4,  42.6, 15.5, '1 medium serving', 117, { fiber: 3.9, sugar: 0.2, fdc: 170721 }],
-  ["McDonald's Egg McMuffin",                    'g', 228, 13.6, 21.7, 9.7,  '1 sandwich', 126, { fiber: 1.1, sugar: 2.1, fdc: 173307 }],
   ["McDonald's Hash Brown",                      'g', 271, 2.5,  28.6, 16.3, '1 piece', 53, { fiber: 2.8, sugar: 0.5, fdc: 173298 }],
   ["McDonald's McFlurry with Oreo",              'g', 165, 4,    25.6, 5.7,  '1 regular', 337, { fiber: 0.1, sugar: 21.2, fdc: 173304 }],
   ['Burger King Whopper with cheese',            'g', 250, 11.2, 16.7, 15.3, '1 burger', 316, { fiber: 1, sugar: 4.1, fdc: 170728 }],
@@ -142,18 +142,11 @@ const ROWS = [
   ['KFC Crispy Strips',                          'g', 274, 20.2, 13.7, 15.4, '1 strip', 47, { fiber: 1.4, sugar: 0, fdc: 170341 }],
   ['KFC Popcorn Chicken',                        'g', 351, 17.7, 21.2, 21.7, '10 pieces', 56, { fiber: 1, sugar: 0, fdc: 170737 }],
   ['KFC Coleslaw',                               'g', 144, 0.9,  15.7, 8.6,  '1 portion', 112, { fiber: 2, sugar: 13.5, fdc: 170340 }],
-  ['Pizza Hut Pepperoni pizza, hand-tossed',     'g', 291, 12.2, 32.1, 12.6, '1 slice', 110, { fiber: 2.6, sugar: 2.8, fdc: 172052 }],
-  ['Pizza Hut Pepperoni pizza, pan',             'g', 291, 11.5, 31.8, 13.1, '1 slice', 113, { fiber: 2, sugar: 1.9, fdc: 172053 }],
   ['Pizza Hut Cheese pizza, stuffed crust',      'g', 274, 12.2, 30,   11.6, '1 slice', 117, { fiber: 1.7, sugar: 2.9, fdc: 170774 }],
-  ['Pizza Hut Super Supreme pizza',              'g', 248, 11.3, 26,   10.9, '1 slice', 123, { fiber: 2.3, sugar: 3, fdc: 172054 }],
   ["Domino's Cheese pizza",                      'g', 257, 10.8, 33.2, 9,    '1 slice', 108, { fiber: 2.2, sugar: 4, fdc: 173282 }],
-  ["Domino's Pepperoni pizza",                   'g', 273, 11.2, 31.9, 11.2, '1 slice', 113, { fiber: 2.1, sugar: 3.7, fdc: 172044 }],
-  ["Domino's ExtravaganZZa pizza",               'g', 244, 10.3, 25.7, 11.1, '1 slice', 151, { fiber: 2, sugar: 3.3, fdc: 172046 }],
   ['Subway Oven Roasted Chicken sub',            'g', 157, 10.8, 21.4, 3.1,  '1 sub (6")', 198, { fiber: 1.2, sugar: 3, fdc: 170314 }],
   ['Subway Steak & Cheese sub',                  'g', 183, 12.3, 21.5, 5.3,  '1 sub (6")', 201, { fiber: 1.2, sugar: 3.4, fdc: 170310 }],
-  ['Subway Black Forest Ham sub',                'g', 151, 9.1,  22.9, 2.5,  '1 sub (6")', 184, { fiber: 1.3, sugar: 3.5, fdc: 170712 }],
   ['Subway Sweet Onion Chicken Teriyaki sub',    'g', 155, 10.9, 22.5, 2.4,  '1 sub (6")', 228, { fiber: 1.2, sugar: 6.1, fdc: 170705 }],
-  ['Subway Meatball Marinara sub',               'g', 219, 9.8,  26,   8.4,  '1 sub (6")', 209, { fiber: 2.1, sugar: 5, fdc: 170708 }],
   ['Popeyes Fried chicken breast',               'g', 274, 21.7, 9.8,  16.5, '1 breast', 194, { fiber: 0.4, sugar: 0, fdc: 170353 }],
   ['Popeyes Fried chicken drumstick',            'g', 293, 20.4, 9.8,  19.1, '1 drumstick', 76, { fiber: null, sugar: null, fdc: 170354 }],
   ['Popeyes Spicy chicken strips',               'g', 253, 19.6, 18.5, 11.2, '1 strip', 53, { fiber: 1.2, sugar: 0, fdc: 170338 }],
@@ -167,46 +160,56 @@ const ROWS = [
   ['Grilled chicken wrap',                       'g', 222, 13.8, 18.4, 10.3, '1 wrap', 123, { fiber: 0.9, sugar: 1.5, fdc: 170786 }],
   ['Soft-serve ice cream cone',                  'g', 163, 4.2,  26.4, 4.9,  '1 cone', 120, { fiber: 0.1, sugar: 19.5, fdc: 173274 }],
 
-  'uzbek',         // Uzbek dishes — estimates, see DISHES below
+  'uzbek',         // Uzbek dishes — estimates, see DISHES below (shawarma too, in fast_food)
   ['Non (flatbread)',              'g', 275, 9.1,  55.7, 1.2,  '1 non', 250, { fiber: 2.2, fdc: 174915 }],   // as white pita: lean wheat flatbread
 ];
 
-// Uzbek dishes: estimates. Each is a typical home recipe in grams of cooked
+// Dishes: estimates (Uzbek dishes, and shawarma for fast food — USDA has none). Each
+// is a typical home recipe in grams of cooked
 // ingredients (built-in foods above); its per-100 g values are the ingredients'
 // weighted average — the same sum as a user's recipe (recipePer100 in nutrition.js), so
 // "Make my own version" turns a dish into a recipe with exactly these numbers.
-// [name, servingLabel, servingGrams, [[ingredient, grams], …]]
+// [name, category, servingLabel, servingGrams, [[ingredient, grams], …]]
 export const DISHES = [
-  ['Plov', '1 plate', 350, [
+  ['Plov', 'uzbek', '1 plate', 350, [
     ['White rice, cooked', 400], ['Lamb shoulder, stewed', 150], ['Carrots, cooked', 200],
     ['Onion, cooked', 50], ['Cottonseed oil', 45], ['Chickpeas, cooked', 40]]],
-  ['Samsa (lamb)', '1 piece', 120, [
+  ['Samsa (lamb)', 'uzbek', '1 piece', 120, [
     ['Puff pastry, baked', 45], ['Ground lamb, cooked', 45], ['Onion, cooked', 30]]],
-  ['Manti (lamb)', '1 piece', 50, [
+  ['Manti (lamb)', 'uzbek', '1 piece', 50, [
     ['Pasta, cooked', 100], ['Ground lamb, cooked', 70], ['Onion, cooked', 60], ['Lamb fat (dumba), cooked', 10]]],
-  ['Lagman', '1 bowl', 500, [
+  ['Lagman', 'uzbek', '1 bowl', 500, [
     ['Pasta, cooked', 200], ['Beef chuck, stewed', 70], ['Red bell pepper', 40], ['Carrots, cooked', 30],
     ['Onion, cooked', 30], ['Tomato', 40], ['Radish (daikon)', 30], ['Cottonseed oil', 15], ['Beef broth', 150]]],
-  ['Shurpa', '1 bowl', 450, [
+  ['Shurpa', 'uzbek', '1 bowl', 450, [
     ['Beef broth', 300], ['Lamb shoulder, stewed', 100], ['Potato, boiled', 100], ['Carrots, cooked', 60],
     ['Onion, cooked', 30], ['Tomato', 40], ['Chickpeas, cooked', 20]]],
-  ['Mastava', '1 bowl', 450, [
+  ['Mastava', 'uzbek', '1 bowl', 450, [
     ['Beef broth', 300], ['White rice, cooked', 80], ['Lamb shoulder, stewed', 70], ['Potato, boiled', 60],
     ['Carrots, cooked', 40], ['Onion, cooked', 30], ['Tomato', 30], ['Cottonseed oil', 10], ['Katyk (plain yogurt)', 30]]],
-  ['Chuchvara', '1 bowl', 400, [
+  ['Chuchvara', 'uzbek', '1 bowl', 400, [
     ['Pasta, cooked', 120], ['Ground beef 90/10, cooked', 60], ['Onion, cooked', 20], ['Beef broth', 200], ['Katyk (plain yogurt)', 30]]],
-  ['Dimlama', '1 plate', 400, [
+  ['Dimlama', 'uzbek', '1 plate', 400, [
     ['Lamb shoulder, stewed', 150], ['Potato, boiled', 200], ['Cabbage, cooked', 150], ['Carrots, cooked', 80],
     ['Onion, cooked', 60], ['Tomato', 80], ['Red bell pepper', 60], ['Cottonseed oil', 10]]],
-  ['Shashlik (lamb)', '1 skewer', 80, [
+  ['Shashlik (lamb)', 'uzbek', '1 skewer', 80, [
     ['Lamb, grilled', 90], ['Lamb fat (dumba), cooked', 10]]],
-  ['Norin', '1 plate', 250, [
+  ['Norin', 'uzbek', '1 plate', 250, [
     ['Pasta, cooked', 150], ['Horse meat, cooked', 80], ['Onion', 20], ['Beef broth', 30]]],
-  ['Moshkichiri', '1 plate', 350, [
+  ['Moshkichiri', 'uzbek', '1 plate', 350, [
     ['White rice, cooked', 150], ['Mung beans, cooked', 150], ['Beef chuck, stewed', 60], ['Onion, cooked', 30],
     ['Carrots, cooked', 30], ['Cottonseed oil', 15]]],
-  ['Achichuk salad', '1 bowl', 150, [
+  ['Achichuk salad', 'uzbek', '1 bowl', 150, [
     ['Tomato', 150], ['Onion', 50]]],
+  ['Shawarma (chicken)', 'fast_food', '1 wrap', 340, [
+    ['Flour tortilla', 80], ['Chicken thigh, cooked', 130], ['Tomato', 35], ['Cucumber', 35], ['Cabbage, raw', 30],
+    ['Mayonnaise', 20], ['Katyk (plain yogurt)', 10]]],
+  ['Shawarma (beef)', 'fast_food', '1 wrap', 340, [
+    ['Flour tortilla', 80], ['Beef sirloin steak, cooked', 130], ['Tomato', 35], ['Cucumber', 35], ['Cabbage, raw', 30],
+    ['Mayonnaise', 20], ['Katyk (plain yogurt)', 10]]],
+  ['Lavash (chicken)', 'fast_food', '1 wrap', 325, [
+    ['Flour tortilla', 80], ['Chicken thigh, cooked', 110], ['French fries', 40], ['Tomato', 30], ['Cucumber', 30],
+    ['Mayonnaise', 20], ['Ketchup', 15]]],
 ];
 
 export const FOOD_CATEGORIES = ROWS.filter((r) => typeof r === 'string');
@@ -228,11 +231,19 @@ function dishPer100(items) {
   const avg = (field) => r1(items.reduce((a, [n, g]) => a + BY_NAME.get(n)[field] * g, 0) / grams);
   return { kcalPer100: avg('kcalPer100'), proteinPer100: avg('proteinPer100'), carbsPer100: avg('carbsPer100'), fatPer100: avg('fatPer100') };
 }
-for (const [name, servingLabel, servingGrams, items] of DISHES) {
+for (const [name, , servingLabel, servingGrams, items] of DISHES) {
   BUILTIN_FOODS.push({ name, baseUnit: 'g', ...dishPer100(items), fiberPer100: null, sugarPer100: null, servingLabel, servingGrams });
 }
 
-export const DISH_BY_NAME = Object.fromEntries(DISHES.map(([name, servingLabel, servingGrams, items]) => [name, { servingLabel, servingGrams, items }]));
+// Built-ins taken out of the catalogue (no pork). seedCatalog archives them: past log
+// entries keep their own copy of the numbers.
+export const RETIRED_FOODS = [
+  'Pork loin, cooked', 'Bacon, cooked', "McDonald's Egg McMuffin", 'Pizza Hut Pepperoni pizza, hand-tossed',
+  'Pizza Hut Pepperoni pizza, pan', 'Pizza Hut Super Supreme pizza', "Domino's Pepperoni pizza", "Domino's ExtravaganZZa pizza",
+  'Subway Black Forest Ham sub', 'Subway Meatball Marinara sub',
+];
+
+export const DISH_BY_NAME = Object.fromEntries(DISHES.map(([name, category, servingLabel, servingGrams, items]) => [name, { category, servingLabel, servingGrams, items }]));
 
 // Built-in food name → category. Kept out of the table: it's derived from this file,
 // so recategorising never needs a migration.
@@ -242,4 +253,4 @@ for (const r of ROWS) {
   if (typeof r === 'string') current = r;
   else BUILTIN_FOOD_CATEGORY[r[0]] = current;
 }
-for (const [name] of DISHES) BUILTIN_FOOD_CATEGORY[name] = 'uzbek';
+for (const [name, category] of DISHES) BUILTIN_FOOD_CATEGORY[name] = category;
