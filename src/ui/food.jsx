@@ -82,17 +82,24 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
     }
   }, [open, log, food]);
 
-  useEffect(() => {
-    if (!open) return;
-    setMeal(log ? log.meal : initialMeal);
-    if (log && log.foodId) { setUnit(log.unit); setQty(log.quantity); }
-    else if (food) {
-      const serving = !!food.servingGrams;
-      setUnit(serving ? 'serving' : food.baseUnit);
-      setQty(serving ? 1 : 100);
+  // Defaults for the entry or food just opened — set while rendering, before the
+  // amount input mounts: it's autofocused and ignores value changes while focused,
+  // so an effect would leave it showing the old amount (100 next to "1 plate").
+  const target = open ? log || food || null : null;
+  const [shownFor, setShownFor] = useState(null);
+  if (target !== shownFor) {
+    setShownFor(target);
+    if (target) {
+      setMeal(log ? log.meal : initialMeal);
+      if (log && log.foodId) { setUnit(log.unit); setQty(log.quantity); }
+      else if (food) {
+        const serving = !!food.servingGrams;
+        setUnit(serving ? 'serving' : food.baseUnit);
+        setQty(serving ? 1 : 100);
+      }
+      if (isQuick) setQuick({ name: log.name, kcal: log.kcal, proteinG: log.proteinG, carbsG: log.carbsG, fatG: log.fatG });
     }
-    if (isQuick) setQuick({ name: log.name, kcal: log.kcal, proteinG: log.proteinG, carbsG: log.carbsG, fatG: log.fatG });
-  }, [open, food, log]);
+  }
 
   const base = food || loaded || null;
   const grams = base ? (unit === 'serving' ? (qty || 0) * (base.servingGrams || 0) : qty || 0) : 0;
@@ -120,6 +127,14 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
       onSaved && onSaved(r.day);
       onClose();
     } catch (e) { toastError(e); }
+  }
+
+  // Same amount of food in the other unit: 1 plate ⇄ 350 g.
+  function switchUnit(next) {
+    if (next === unit || !base || !base.servingGrams) { setUnit(next); return; }
+    const g = base.servingGrams;
+    setQty(next === 'serving' ? Math.round(((qty || 0) / g) * 100) / 100 : Math.round((qty || 0) * g));
+    setUnit(next);
   }
 
   // A shared food can't be edited; this gives the user their own copy to change.
@@ -153,7 +168,7 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 8, alignItems: 'end' }}>
             <label className="form-row"><span className="label">{t('Amount')}</span>
               <NumberInput value={qty} decimals={unit === 'serving' ? 2 : 0} live onCommit={(v) => setQty(v ?? 0)} label={t('Amount')} autoFocus={!editing} /></label>
-            {units.length > 1 ? <Segmented label={t('Unit')} value={unit} onChange={setUnit} options={units} /> : <span className="hint" style={{ paddingBottom: 12 }}>{t(unit)}</span>}
+            {units.length > 1 ? <Segmented label={t('Unit')} value={unit} onChange={switchUnit} options={units} /> : <span className="hint" style={{ paddingBottom: 12 }}>{t(unit)}</span>}
           </div>
           <div className="row-between"><span className="hint">{t('Energy')}</span><span className="mid-num">{fmt.e(n.kcal)}</span></div>
           <MacroLine n={n} fmt={fmt} />
