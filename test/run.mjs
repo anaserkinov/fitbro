@@ -88,7 +88,7 @@ console.log('Programs (math)');
 
 console.log('Program recommendations');
 {
-  const { recommendPrograms, inferLevel } = await import('../tgcloud/lib/recommend.js');
+  const { recommendPrograms, inferLevel } = await import('../tgcloud/lib/programs.js');
   const { PROGRAMS } = await import('../tgcloud/lib/data/programs.js');
   const none = { activeWeeks: 0, squatRatio: 0, benchRatio: 0 };
   const rec = (profile, signals = none) => recommendPrograms({ goal: 'maintain', sessionMinutes: null, ...profile }, signals, PROGRAMS);
@@ -100,19 +100,63 @@ console.log('Program recommendations');
   assert.equal(inferLevel({ activeWeeks: 14, squatRatio: 1.2, benchRatio: 0.9 }), 'some'); ok('level from the log: active weeks and strength for body weight');
 
   let r = rec({ experience: 'new', equipment: 'gym', workoutsPerWeek: 3, sessionMinutes: 45 });
-  assert.deepEqual(codes(r), ['full_body_beginner']); assert.deepEqual(keys(r[0]), ['Fits your {n} days a week', 'Made for beginners', 'Sessions fit in {n} min']);
-  assert.deepEqual(r[0].reasons[2].params, { n: 35 }); ok('beginner, 3 days, gym → beginner full body only (5/3/1 and PPL too advanced), with reasons');
+  assert.deepEqual(codes(r), ['full_body_beginner', 'dumbbell_full_body_3', 'full_body_2day']); assert.deepEqual(keys(r[0]), ['Fits your {n} days a week', 'Made for beginners', 'Sessions fit in {n} min']);
+  assert.deepEqual(r[0].reasons[2].params, { n: 35 }); ok('beginner, 3 days, gym → beginner full body first (5/3/1, PPL and upper/lower too advanced), with reasons');
   r = rec({ experience: 'some', equipment: 'gym', workoutsPerWeek: 6, goal: 'bulk' });
   assert.equal(codes(r)[0], 'ppl_12'); assert.ok(keys(r[0]).includes('Plenty of volume for building muscle')); ok('some experience, 6 days, bulk → PPL first');
   r = rec({ experience: 'some', equipment: 'gym', workoutsPerWeek: 4 });
-  assert.deepEqual(codes(r), ['wendler_531', 'full_body_beginner']); ok('4 days → 5/3/1 (exact), beginner 3-day as a near fit');
+  assert.deepEqual(codes(r).slice(0, 2), ['wendler_531', 'upper_lower_4']); ok('some experience, 4 days → 5/3/1 and upper/lower');
+  assert.equal(codes(rec({ experience: 'some', equipment: 'gym', workoutsPerWeek: 4, goal: 'bulk' }))[0], 'upper_lower_4'); ok('…and upper/lower first when building muscle');
   r = rec({ experience: 'new', equipment: 'gym', workoutsPerWeek: 4 }, { activeWeeks: 14, squatRatio: 1.6, benchRatio: 1.2 });
   assert.equal(codes(r)[0], 'wendler_531'); assert.ok(keys(r[0]).includes('Your log shows steady training')); ok('said beginner, log says experienced → recommended at the higher level, with why');
   r = rec({ experience: 'experienced', equipment: 'gym', workoutsPerWeek: 4 });
   assert.equal(codes(r)[0], 'wendler_531'); assert.ok(keys(r[0]).includes('For experienced lifters')); ok('no history never moves a user down');
-  assert.deepEqual(rec({ experience: 'new', equipment: 'dumbbells', workoutsPerWeek: 3 }), []); ok('nothing for dumbbells yet → empty, not a bad match');
+  r = rec({ experience: 'new', equipment: 'dumbbells', workoutsPerWeek: 3 });
+  assert.equal(codes(r)[0], 'dumbbell_full_body_3'); assert.ok(keys(r[0]).includes('Built for dumbbells only')); assert.ok(!codes(r).some((c) => ['full_body_beginner', 'ppl_12', 'wendler_531'].includes(c))); ok('dumbbells, 3 days → dumbbell full body; no barbell programs');
+  assert.deepEqual(codes(rec({ experience: 'new', equipment: 'home', workoutsPerWeek: 3 })), ['home_bodyweight_3']); ok('home → the bodyweight program');
+  assert.ok(!codes(rec({ experience: 'new', equipment: 'gym', workoutsPerWeek: 3 })).includes('home_bodyweight_3')); ok('gym users aren’t sent home');
   assert.deepEqual(rec({ experience: null, equipment: 'gym', workoutsPerWeek: 3 }), []); ok('unanswered profile → no recommendation');
-  assert.deepEqual(rec({ experience: 'some', equipment: 'gym', workoutsPerWeek: 1 }), []); ok('no program within a day of the weekly target → none');
+  assert.deepEqual(rec({ experience: 'experienced', equipment: 'gym', workoutsPerWeek: 7 }).map((x) => x.code), ['ppl_12']); assert.deepEqual(rec({ experience: 'new', equipment: 'home', workoutsPerWeek: 6 }), []); ok('no program within a day of the weekly target → none');
+}
+
+console.log('Program slots and templates');
+{
+  const { PROGRAMS, PROGRAM_BY_CODE, planFor, advanceFor } = await import('../tgcloud/lib/data/programs.js');
+  const { resolveProgram, candidates, choicesOf, SLOTS } = await import('../tgcloud/lib/data/programs.js');
+  const { BUILTIN_EXERCISES } = await import('../tgcloud/lib/data/exercises.js');
+  const catalog = new Map(BUILTIN_EXERCISES.map((e) => [e.name, e]));
+  const names = (r, d) => r.days[d].exercises.map((x) => x.name);
+
+  const unknown = [...new Set([...Object.values(SLOTS).flatMap((s) => [...s.gym, ...s.dumbbells, ...s.home]), ...PROGRAMS.flatMap((p) => p.days.flatMap((d) => d.exercises.map((x) => x.name)))])].filter((n) => !catalog.has(n));
+  assert.deepEqual(unknown, []); ok('every slot candidate and template exercise is in the catalogue');
+  const notDoable = PROGRAMS.flatMap((p) => p.equipment.filter((eq) => !resolveProgram(p, { equipment: eq }).doable).map((eq) => `${p.code}/${eq}`));
+  assert.deepEqual(notDoable, []); ok('each template resolves every required exercise for every equipment it lists');
+  const timed = PROGRAMS.flatMap((p) => ['gym', 'dumbbells', 'home'].flatMap((eq) => resolveProgram(p, { equipment: eq }).days.flatMap((d) => d.exercises.map((x) => x.name))))
+    .filter((n) => !['weight_reps', 'bodyweight_reps'].includes(catalog.get(n).trackType));
+  assert.deepEqual([...new Set(timed)], []); ok('programs only use weight × reps or bodyweight reps exercises');
+
+  const ppl = PROGRAM_BY_CODE.ppl_12, fb = PROGRAM_BY_CODE.full_body_beginner;
+  assert.deepEqual(choicesOf(resolveProgram(ppl)), Object.fromEntries(ppl.days.flatMap((d, di) => d.exercises.map((x, i) => [`${di}.${i}`, x.name])))); ok('gym, no time limit → exactly the template (no change for existing users)');
+  assert.deepEqual(names(resolveProgram(fb, { equipment: 'dumbbells' }), 0), ['Goblet Squat', 'Dumbbell Bench Press', 'Dumbbell Row']);
+  assert.deepEqual(names(resolveProgram(fb, { equipment: 'dumbbells' }), 1), ['Goblet Squat', 'Seated Dumbbell Press', 'Dumbbell Romanian Deadlift']); ok('beginner full body with dumbbells → goblet squat, dumbbell press, row, RDL');
+  assert.deepEqual(names(resolveProgram(ppl, { equipment: 'dumbbells' }), 1), ['Dumbbell Row', 'Lat Pulldown', 'Rear Delt Fly', 'Dumbbell Curl']);
+  assert.equal(resolveProgram(ppl, { equipment: 'dumbbells' }).doable, false); ok('PPL with dumbbells: optional cable row dropped; lat pulldown has no dumbbell option → kept as is, not doable');
+  let r = resolveProgram(ppl, { sessionMinutes: 45 });
+  assert.deepEqual(names(r, 0), ['Barbell Bench Press', 'Overhead Press', 'Incline Dumbbell Press', 'Lateral Raise']); assert.ok(r.days.every((d) => d.minutes <= 45)); ok('45 min → optional accessories dropped from the end, main lifts kept');
+  assert.equal(resolveProgram(ppl, { sessionMinutes: 30 }).days[0].exercises.length, 3); ok('never below the required exercises');
+  r = resolveProgram(fb, { swaps: { '0.2': 'Dumbbell Row', '0.1': 'Squat Jumps' } });
+  assert.deepEqual(names(r, 0), ['Back Squat', 'Barbell Bench Press', 'Dumbbell Row']); ok('valid swap applied, unknown one ignored');
+  assert.ok(candidates(fb.days[0].exercises[0], 'home').every((n) => catalog.get(n).equipment === 'bodyweight')); ok('home candidates need no equipment');
+
+  const home = PROGRAM_BY_CODE.home_bodyweight_3;
+  const pushup = { ...home.days[0].exercises[1], track: 'bodyweight_reps' };
+  assert.deepEqual(planFor(home, pushup, { state: { reps: 9 }, weekIndex: 0 }).map((x) => [x.weightKg, x.reps]), Array(3).fill([null, 9])); ok('bodyweight: reps only');
+  r = advanceFor(home, pushup, { reps: 9 }, [{ reps: 9 }, { reps: 10 }, { reps: 9 }], { weekIndex: 0 });
+  assert.deepEqual([r.reps, r.change.kind], [10, 'reps']);
+  assert.equal(advanceFor(home, pushup, { reps: 9 }, [{ reps: 9 }, { reps: 8 }, { reps: 9 }], { weekIndex: 0 }), null);
+  assert.equal(advanceFor(home, pushup, { reps: 15 }, [{ reps: 15 }, { reps: 15 }, { reps: 15 }], { weekIndex: 0 }), null); ok('bodyweight: +1 rep when every set hits, same on a miss, holds at the top of the range');
+  const ul = PROGRAM_BY_CODE.upper_lower_4;
+  assert.equal(ul.prescribe(ul.days[0].exercises[0], { state: { workingKg: 80 }, weekIndex: 4 }).length, 2); assert.equal(ul.advance(ul.days[0].exercises[0], { workingKg: 80, source: 'history' }, [], { weekIndex: 4 }), null); ok('upper/lower: every 5th week is a deload');
 }
 
 console.log('Catalog');

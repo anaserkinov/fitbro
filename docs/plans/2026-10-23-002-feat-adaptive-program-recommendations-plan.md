@@ -225,6 +225,18 @@ Phase A shipped with these deviations from the decisions above. Where they disag
 
 ---
 
+## Phase C implementation notes (2026-10-23)
+
+- **Picking an exercise for a slot (KTD12):** gym users get the template's own exercise first, then any candidate. Dumbbell users get the dumbbell list, then the home list. Home users get the home list. Within a day the first candidate not already used wins. When a required exercise has no candidate, it keeps the template's exercise and the program is marked `doable: false`. A test checks that every template resolves for each equipment it lists. The home template lists `home` and `dumbbells` but not `gym`, so gym users aren't sent home.
+- **Weight steps for swapped-in exercises:** a swapped-in exercise steps by its catalogue equipment (dumbbell 2.5, machine 5, cable 2.5, kettlebell 4). Plate rounding stays at 2.5. A swapped-in exercise loses `pattern`, so it gets no barbell-based guess and simply calibrates.
+- **Bodyweight exercises (KTD9):** these are `bodyweight_reps` exercises. They get a lift state with `source: 'reps'` and are prescribed and advanced by `planFor` / `advanceFor`, whatever the template's own rule is. Programs written for weights get a default range: from the template's reps, or 8, up to 15 or reps + 5. `weighted_bodyweight` exercises (pull-up, dip) are kept out of the slot defaults.
+- **Recommendation:** "made for exactly this setup" earns +10 points (`equipment[0]`). Session fit is measured after trimming.
+- **Catalogue:** `enrollProgram` runs `seedCatalog()` when a chosen built-in exercise is missing, so production gets the 8 new exercises without a manual `adminSeed`.
+- **Module count:** the platform caps modules per app, so the slot table lives in `tgcloud/lib/data/programs.js` and recommendations in `tgcloud/lib/programs.js` rather than in the new `data/slots.js` and `recommend.js` files the plan names. The module count stays at 59, as in the last deploy.
+- **Template changes:** existing templates gained `slot` and `optional` keys only. Days, exercise order and names are unchanged, and enrollments with null `exercise_choices` keep using the template names.
+
+---
+
 ## Implementation Units
 
 | U-ID | Title | Key files | Depends on |

@@ -137,8 +137,8 @@ volume `{ volumeKg, sets }`; strength `{ bodyWeightKg, lifts: [{ exercise, e1rmK
 |---|---|---|
 | `prepareShare` | `workoutId` (finished), `imageBase64` (the card, PNG/JPEG) | `{ id }` for `Telegram.WebApp.shareMessage(id)` (Bot API 8.0+) |
 | `getAchievements` | — | `{ achievements: [{ code, earnedAt }], earnedCount }` — catalogue in `lib/data/achievements.js` |
-| `listPrograms` | — | `{ programs, activeCode, suggestedMaxes, recommended, needsProfile }` — `suggestedMaxes`: 5/3/1 1RMs from the last 90 days; `recommended`: up to 3 `{ code, score, reasons: [{ key, params }] }` (translation keys) when not in a program; `needsProfile`: `experience`/`equipment` not answered |
-| `enrollProgram` | `code` + `oneRepMaxes?: { ohp, deadlift, bench, squat }` (kg, 5/3/1) | same as `getMyProgram` — creates the routines and **replaces the weekly schedule** |
+| `listPrograms` | — | `{ programs, activeCode, suggestedMaxes, recommended, needsProfile }` — `suggestedMaxes`: 5/3/1 1RMs from the last 90 days; each program's `days: [{ name, minutes, exercises: [{ key, name, alternatives, optional }] }]` is laid out for the caller's equipment and session length, `doable` = every required exercise fits their equipment; `recommended`: up to 3 `{ code, score, reasons: [{ key, params }] }` (translation keys) when not in a program; `needsProfile`: `experience`/`equipment` not answered |
+| `enrollProgram` | `code` + `oneRepMaxes?: { ohp, deadlift, bench, squat }` (kg, 5/3/1) + `swaps?: { '<day>.<i>': exercise name }` (one of that exercise's `alternatives`) | same as `getMyProgram` — creates the routines for the user's equipment and session length and **replaces the weekly schedule** |
 | `getMyProgram` | — | `{ program, enrollment, weekIndex, week, of, cycle, deload, sessionsDone, sessionsThisWeek, daysPerWeek, routines }` or `{ program: null, lastEnded }` |
 | `leaveProgram` | — | `{ left: true }` — routines archived, schedule days cleared, workouts kept |
 | `exportData` | — | `{ files }` — the bot sends CSVs to your chat; once an hour |
@@ -147,7 +147,7 @@ volume `{ volumeKg, sets }`; strength `{ bodyWeightKg, lifts: [{ exercise, e1rmK
 routine pre-fills that week's prescribed sets from each exercise's lift state; its exercises have
 `target: null` and, while the workout is open, `program: { calibrate, guess, change }` — `calibrate`
 = nothing known yet, this session sets the weight (log `rir` on the sets); `change` = why the weight
-changed (`{ kind: 'up' | 'hold' | 'reset' | 'break' | 'calibrated', fromKg, toKg }`). Finishing it
+changed (`{ kind: 'up' | 'hold' | 'reset' | 'break' | 'calibrated' | 'reps', fromKg, toKg, fromReps?, toReps? }`; `reps` = a bodyweight exercise's rep target went up). Finishing it
 advances the lift states and returns the changes as `programChanges: [{ exerciseId, exerciseName,
 kind, fromKg, toKg }]`. The program week counts finished sessions (`sessionsDone`).
 

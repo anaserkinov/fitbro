@@ -75,7 +75,7 @@ export default function WorkoutSummary({ result }) {
             {programChanges.map((c) => (
               <Row key={c.exerciseId} icon={c.toKg < c.fromKg ? 'arrowDown' : 'arrowUp'} iconColor={c.toKg < c.fromKg ? 'var(--hint)' : 'var(--good)'}
                 title={cname(c.exerciseName)} sub={describeChange(c, t, (kg) => fmt.w(kg))}
-                value={c.fromKg && c.fromKg !== c.toKg ? `${fmt.w(c.fromKg)} → ${fmt.w(c.toKg)}` : fmt.w(c.toKg)} />
+                value={c.kind === 'reps' ? `× ${c.fromReps} → ${c.toReps}` : c.fromKg && c.fromKg !== c.toKg ? `${fmt.w(c.fromKg)} → ${fmt.w(c.toKg)}` : fmt.w(c.toKg)} />
             ))}
           </List>
         </Section>

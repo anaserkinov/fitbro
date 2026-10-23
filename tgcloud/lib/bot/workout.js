@@ -221,7 +221,7 @@ export async function onWorkoutButton(user, chatId, messageId, data) {
     if (r.progression.length) lines.push('', `📈 ${t.n(r.progression.length, '{n} target went up for next time', '{n} targets went up for next time')}`);
     if (r.programChanges.length) {
       const w = (kg) => kgText(kg, user);
-      lines.push('', `📈 <b>${t('Next time')}</b>`, ...r.programChanges.map((c) => `• ${esc(catalogName(user.language, c.exerciseName))}: ${w(c.toKg)} — ${describeChange(c, t, w)}`));
+      lines.push('', `📈 <b>${t('Next time')}</b>`, ...r.programChanges.map((c) => `• ${esc(catalogName(user.language, c.exerciseName))}: ${c.kind === 'reps' ? `× ${c.toReps}` : w(c.toKg)} — ${describeChange(c, t, w)}`));
     }
     const badges = (r.achievements || []).map((a) => ACHIEVEMENT_BY_CODE[a.code]).filter(Boolean);
     if (badges.length) lines.push('', `🏅 <b>${t('Achievement unlocked')}</b>`, ...badges.map((a) => `${a.icon} ${t(a.title)}`));

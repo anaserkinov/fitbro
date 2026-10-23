@@ -105,6 +105,16 @@ const ROWS = [
   ['Stair Climber',              'cardio', 'machine', C, DUR,  [], ['stairmaster', 'stairs']],
   ['Jump Rope',                  'cardio', 'other',   C, DUR,  [], ['skipping']],
 
+  // Dumbbell and home training (programs)
+  ['Dumbbell Romanian Deadlift', 'legs', 'dumbbell', C, WR, ['back'], ['db rdl']],
+  ['Dumbbell Calf Raise',        'legs', 'dumbbell', I, WR, [], ['db calf raise']],
+  ['Inverted Row',               'back', 'bodyweight', C, BW, ['biceps'], ['body row', 'australian pull-up']],
+  ['Pike Push-up',               'shoulders', 'bodyweight', C, BW, ['triceps'], ['pike pushup']],
+  ['Glute Bridge',               'legs', 'bodyweight', I, BW, ['core'], ['hip bridge']],
+  ['Bodyweight Squat',           'legs', 'bodyweight', C, BW, [], ['air squat']],
+  ['Single-Leg Calf Raise',      'legs', 'bodyweight', I, BW, [], ['single leg calf raise']],
+  ['Reverse Lunge',              'legs', 'bodyweight', C, BW, [], ['back lunge']],
+
   // Full body
   ['Kettlebell Swing',           'full_body', 'kettlebell', C, WR, ['legs', 'back'], ['kb swing']],
   ['Power Clean',                'full_body', 'barbell',    C, WR, ['legs', 'back'], ['clean']],

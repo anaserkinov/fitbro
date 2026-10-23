@@ -495,6 +495,7 @@ export const programEnrollments = table('program_enrollments', {
   trainingMaxes: json('training_maxes'),                     // 5/3/1: { ohp, deadlift, bench, squat } in kg
   weekOffset:    integer('week_offset'),                     // weeks done before weeks were counted by sessions; null = not yet set
   breakDeloadDate: text('break_deload_date'),                // last 'welcome back' deload (local date)
+  exerciseChoices: json('exercise_choices'),                 // { '<day>.<i>': exercise name } kept at enrolment; null = the template's names
   endedAt:       integer('ended_at', { mode: 'timestamp' }),
   createdAt:     integer('created_at', { mode: 'timestamp' }).default(now),
 }, (t) => ({
@@ -513,7 +514,7 @@ export const programLifts = table('program_lifts', {
   reps:         integer('reps'),
   misses:       integer('misses').notNull().default(0),
   cycle:        integer('cycle'),                            // 5/3/1: the wave the training max belongs to
-  source:       text('source').notNull(),                    // 'entered' | 'history' | 'calibrated' | 'guess'
+  source:       text('source').notNull(),                    // 'entered' | 'history' | 'calibrated' | 'guess' | 'reps'
   lastChange:   json('last_change'),                         // { kind, fromKg, toKg } — shown in the workout
   updatedAt:    integer('updated_at', { mode: 'timestamp' }).default(now),
 }, (t) => ({

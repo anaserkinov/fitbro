@@ -95,6 +95,14 @@ export const CATALOG = {
     'Power Clean': 'Взятие на грудь',
     'Thruster': 'Трастеры',
     'Burpee': 'Бёрпи',
+    'Dumbbell Romanian Deadlift': 'Румынская тяга с гантелями',
+    'Dumbbell Calf Raise': 'Подъём на носки с гантелями',
+    'Inverted Row': 'Австралийские подтягивания',
+    'Pike Push-up': 'Отжимания в складке',
+    'Glute Bridge': 'Ягодичный мостик',
+    'Bodyweight Squat': 'Приседания без веса',
+    'Single-Leg Calf Raise': 'Подъём на носок на одной ноге',
+    'Reverse Lunge': 'Обратные выпады',
 
     // Foods
     'Chicken breast, cooked': 'Куриная грудка, варёная',
@@ -256,6 +264,14 @@ export const CATALOG = {
     'Power Clean': 'Ko‘krakka olish (power clean)',
     'Thruster': 'Trasterlar',
     'Burpee': 'Byorpi',
+    'Dumbbell Romanian Deadlift': 'Gantel bilan rumin tyagasi',
+    'Dumbbell Calf Raise': 'Gantel bilan barmoqlarda ko‘tarilish',
+    'Inverted Row': 'Avstraliya tortilishi',
+    'Pike Push-up': 'Pike otjimaniya',
+    'Glute Bridge': 'Dumba ko‘prigi',
+    'Bodyweight Squat': 'Og‘irliksiz prisyad',
+    'Single-Leg Calf Raise': 'Bir oyoqda barmoqlarda ko‘tarilish',
+    'Reverse Lunge': 'Orqaga hamla',
 
     // Foods
     'Chicken breast, cooked': 'Tovuq ko‘kragi, pishirilgan',

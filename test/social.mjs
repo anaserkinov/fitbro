@@ -514,6 +514,7 @@ console.log('Programs');
   const lift = (uid, name) => db.select().from(PL).where(and(eq(PL.userId, uid), eq(PL.exerciseId, exId(name)))).orderBy(PL.id).all().then((r) => r[r.length - 1]);
   const setPE = (uid, patch) => db.update(PE).set(patch).where(and(eq(PE.userId, uid), isNull(PE.endedAt))).run();
   // Starts a program routine, logs every planned set (fn(exercise, set) → patch; default: as planned) and finishes.
+  let s;
   const session = async (uid, routineId, fn = () => ({})) => {
     const w = await call(uid, 'startWorkout', { routineId });
     for (const e of w.exercises) for (const x of e.sets) await call(uid, 'updateSet', { id: x.id, weightKg: x.weightKg ?? 20, reps: x.reps ?? 10, ...fn(e, x), completed: true });
@@ -521,8 +522,11 @@ console.log('Programs');
   };
 
   const lp = await call(PU, 'listPrograms');
-  assert.deepEqual(lp.programs.map((p) => p.code), ['full_body_beginner', 'ppl_12', 'wendler_531']); assert.equal(lp.activeCode, null);
-  assert.deepEqual(lp.suggestedMaxes, { ohp: null, deadlift: null, bench: null, squat: null }); ok('three programs; no history → no suggested maxes');
+  assert.deepEqual(lp.programs.map((p) => p.code), ['full_body_beginner', 'ppl_12', 'wendler_531', 'full_body_2day', 'upper_lower_4', 'dumbbell_full_body_3', 'home_bodyweight_3']); assert.equal(lp.activeCode, null);
+  assert.deepEqual(lp.suggestedMaxes, { ohp: null, deadlift: null, bench: null, squat: null }); ok('seven programs; no history → no suggested maxes');
+  const ppl = lp.programs.find((p) => p.code === 'ppl_12');
+  assert.deepEqual(ppl.days[0].exercises.map((x) => x.name), ['Barbell Bench Press', 'Overhead Press', 'Incline Dumbbell Press', 'Lateral Raise', 'Triceps Pushdown']);
+  assert.ok(ppl.days[0].exercises[0].alternatives.includes('Dumbbell Bench Press')); assert.equal(ppl.days[0].minutes, 50); ok('each program laid out for the caller, with swaps and minutes per day');
   let my = await call(PU, 'enrollProgram', { code: 'wendler_531', oneRepMaxes: { bench: 111, squat: 160, deadlift: 200, ohp: 70 } });
   assert.equal(my.program.code, 'wendler_531'); assert.deepEqual(my.enrollment.trainingMaxes, { ohp: 62.5, deadlift: 180, bench: 100, squat: 145 });
   assert.equal(my.routines.length, 4); assert.equal(my.week, 1); assert.equal(my.sessionsDone, 0); ok('enrol in 5/3/1: training maxes from the 1RMs, four routines');
@@ -574,7 +578,7 @@ console.log('Programs');
   await onboard(NU);
   my = await call(NU, 'enrollProgram', { code: 'full_body_beginner' });
   const A = my.routines.find((r) => r.day === 0).id, B = my.routines.find((r) => r.day === 1).id;
-  let s = await session(NU, A, (e, x) => (e.exercise.name === 'Back Squat' ? { weightKg: 70, reps: 5, rir: x.position === 2 ? 2 : null } : {}));
+  s = await session(NU, A, (e, x) => (e.exercise.name === 'Back Squat' ? { weightKg: 70, reps: 5, rir: x.position === 2 ? 2 : null } : {}));
   const sq = s.start.exercises[0];
   assert.deepEqual(sq.sets.map((x) => [x.weightKg, x.reps]), Array(3).fill([40, 5])); assert.deepEqual([sq.program.calibrate, sq.program.guess], [true, true]); ok('no history: squat starts from a guess (80 kg man → 40 kg) and asks to calibrate');
   assert.equal(s.finish.programChanges.find((c) => c.exerciseName === 'Back Squat').toKg, 70); ok('calibration: 70 × 5 with 2 left → 70 kg');
@@ -608,6 +612,44 @@ console.log('Programs');
   assert.equal((await call(NU, 'getMyProgram')).program, null); ok('28 days without a session → the program ends');
   await fails(call(NU, 'leaveProgram'), 'NOT_FOUND'); ok('nothing to leave → NOT_FOUND');
   await fails(call(NU, 'enrollProgram', { code: 'nope' }), 'INVALID_INPUT'); ok('unknown program → INVALID_INPUT');
+
+  // Equipment, session length and swaps
+  const DU = 554;
+  await onboard(DU);
+  await call(DU, 'updateSettings', { equipment: 'dumbbells', experience: 'new', sessionMinutes: 45 });
+  await fails(call(DU, 'enrollProgram', { code: 'full_body_beginner', swaps: { '0.0': 'Leg Extension' } }), 'INVALID_INPUT');
+  await fails(call(DU, 'enrollProgram', { code: 'full_body_beginner', swaps: ['x'] }), 'INVALID_INPUT'); ok('a swap outside the exercise’s options → INVALID_INPUT');
+  my = await call(DU, 'enrollProgram', { code: 'full_body_beginner', swaps: { '0.0': 'Bulgarian Split Squat' } });
+  let rt = (await call(DU, 'getRoutine', { id: my.routines.find((r) => r.day === 0).id })).routine;
+  assert.deepEqual(rt.items.map((x) => x.exercise.name), ['Bulgarian Split Squat', 'Dumbbell Bench Press', 'Dumbbell Row']);
+  rt = (await call(DU, 'getRoutine', { id: my.routines.find((r) => r.day === 1).id })).routine;
+  assert.deepEqual(rt.items.map((x) => x.exercise.name), ['Goblet Squat', 'Seated Dumbbell Press', 'Dumbbell Romanian Deadlift']); ok('dumbbells: barbell lifts become dumbbell ones; the chosen swap is used');
+  assert.deepEqual(my.program.days[0].exercises.map((x) => x.name), ['Bulgarian Split Squat', 'Dumbbell Bench Press', 'Dumbbell Row']); ok('my program shows the enrolled exercises');
+  pw = await call(DU, 'startWorkout', { routineId: my.routines.find((r) => r.day === 0).id });
+  assert.ok(pw.exercises.every((e) => e.program.calibrate && !e.program.guess)); assert.ok(pw.exercises.every((e) => e.sets.every((x) => x.weightKg === null))); ok('swapped-in dumbbell lifts get no barbell guess, just calibration');
+  await call(DU, 'discardWorkout', { id: pw.workout.id });
+  await call(DU, 'leaveProgram');
+  await call(DU, 'updateSettings', { sessionMinutes: 30 });
+  my = await call(DU, 'enrollProgram', { code: 'dumbbell_full_body_3' });
+  rt = (await call(DU, 'getRoutine', { id: my.routines.find((r) => r.day === 0).id })).routine;
+  assert.deepEqual(rt.items.map((x) => x.exercise.name), ['Goblet Squat', 'Dumbbell Bench Press', 'Dumbbell Row']); ok('30 minutes → optional exercises dropped (lateral raise, dead bug)');
+  await call(DU, 'leaveProgram');
+
+  const HU = 555;
+  await onboard(HU);
+  await db.delete(T.exercises).where(and(eq(T.exercises.userId, 0), eq(T.exercises.name, 'Inverted Row'))).run();   // as on a bot seeded before it existed
+  await call(HU, 'updateSettings', { equipment: 'home', experience: 'new' });
+  assert.deepEqual((await call(HU, 'listPrograms')).recommended.map((r) => r.code), ['home_bodyweight_3']);
+  my = await call(HU, 'enrollProgram', { code: 'home_bodyweight_3' });
+  const HA = my.routines.find((r) => r.day === 0).id;
+  s = await session(HU, HA, (e, x) => ({ weightKg: null, reps: x.reps }));
+  const push = s.start.exercises.find((e) => e.exercise.name === 'Push-up');
+  assert.deepEqual(push.sets.map((x) => [x.weightKg, x.reps]), Array(3).fill([null, 6])); assert.equal(push.program.calibrate, false);
+  assert.ok(s.start.exercises.some((e) => e.exercise.name === 'Inverted Row')); ok('enrolling adds built-in exercises the catalogue is missing');
+  assert.ok(s.finish.programChanges.some((c) => c.exerciseName === 'Push-up' && c.kind === 'reps' && c.toReps === 7)); ok('home: push-ups 3 × 6, all done → 7 next time');
+  s = await session(HU, HA, (e, x) => ({ weightKg: null, reps: e.exercise.name === 'Push-up' && x.position === 2 ? 5 : x.reps }));
+  assert.deepEqual(s.start.exercises.find((e) => e.exercise.name === 'Push-up').sets.map((x) => x.reps), [7, 7, 7]);
+  assert.equal((await lift(HU, 'Push-up')).reps, 7); ok('a set short → same rep target');
 
   // Recommendations
   const RU = 553;
@@ -695,7 +737,7 @@ console.log('Friends: translations');
   // Program names, descriptions and day names: routines get them from the bot's translator.
   const { PROGRAMS } = await import('../tgcloud/lib/data/programs.js');
   for (const p of PROGRAMS) for (const k of [p.name, p.about, ...p.days.map((d) => d.name)]) for (const l of ['ru', 'uz']) if (!(k in BOT_DICT[l]) || !(k in APP_DICT[l])) missing.push(`programs [${l}] ${k}`);
-  const { REASONS } = await import('../tgcloud/lib/recommend.js');
+  const { REASONS } = await import('../tgcloud/lib/programs.js');
   for (const k of Object.values(REASONS)) for (const l of ['ru', 'uz']) if (!(k in APP_DICT[l])) missing.push(`recommendation reason [${l}] ${k}`);
   assert.deepEqual(missing, []); ok('every friends string has ru and uz, in the dictionary its runtime loads');
 }

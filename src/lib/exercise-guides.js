@@ -117,6 +117,16 @@ const CUES = {
   'Stair Climber':               ['Stand tall, light grip on the rails', 'Whole foot on each step', 'Don’t lean on the machine'],
   'Jump Rope':                   ['Small jumps on the balls of your feet', 'Turn the rope with your wrists', 'Elbows close to your body'],
 
+  // Dumbbell and home training
+  'Dumbbell Romanian Deadlift':  ['Dumbbells in front of the thighs, soft knees', 'Push the hips back, dumbbells slide down the legs', 'Stop at a hamstring stretch, hips forward to stand'],
+  'Dumbbell Calf Raise':         ['Dumbbells at your sides, balls of the feet on a step', 'Lower the heels to a full stretch', 'Rise as high as you can, pause at the top'],
+  'Inverted Row':                ['Lie under a sturdy table or low bar, grip the edge', 'Body straight from heels to shoulders', 'Pull your chest up to it, lower with control'],
+  'Pike Push-up':                ['Hips high, body in an upside-down V', 'Bend the elbows, lower the head toward the floor', 'Press back up to straight arms'],
+  'Glute Bridge':                ['Lie on your back, knees bent, feet flat', 'Drive through the heels, lift the hips', 'Squeeze the glutes at the top, lower slowly'],
+  'Bodyweight Squat':            ['Feet shoulder width, arms forward', 'Sit down and back, knees follow the toes', 'Thighs to parallel, stand up tall'],
+  'Single-Leg Calf Raise':       ['Ball of one foot on a step, hold on for balance', 'Lower the heel to a full stretch', 'Rise as high as you can, pause at the top'],
+  'Reverse Lunge':               ['Stand tall, step one foot back', 'Back knee almost touches the floor', 'Push through the front heel to stand'],
+
   // Full body
   'Kettlebell Swing':            ['Hinge at the hips, it’s not a squat', 'Snap the hips forward to swing the bell', 'Arms relaxed, bell floats to chest height'],
   'Power Clean':                 ['Start like a deadlift, back flat', 'Jump and shrug, pull the bar high', 'Catch it on your shoulders in a quarter squat'],
