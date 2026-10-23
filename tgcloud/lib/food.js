@@ -10,7 +10,8 @@ import { catalogName, catalogSearch } from './i18n/catalog.js';
 import { FOOD_CATEGORIES, BUILTIN_FOOD_CATEGORY } from './data/foods.js';
 
 const F = T.foods, FL = T.foodLogs, WL = T.waterLogs, FAV = T.favoriteFoods, RI = T.recipeItems;
-export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
+// In order of the day. 'snack' is the evening one (it predates the other two).
+export const MEALS = ['breakfast', 'snack_am', 'lunch', 'snack_pm', 'dinner', 'snack'];
 
 export function targetsOf(user) {
   return { kcal: user.kcalTarget, proteinG: user.proteinTargetG, carbsG: user.carbsTargetG, fatG: user.fatTargetG };

@@ -79,8 +79,8 @@ export function relativeDay(d, today) {
 }
 
 // English labels — they're also the translation keys, so wrap at display: t(MEAL_LABEL[m]).
-export const MEAL_LABEL = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' };
-export const MEAL_COLOR = { breakfast: '#E8890C', lunch: '#23843F', dinner: '#1E73BE', snack: '#8E5BD8' };
+export const MEAL_LABEL = { breakfast: 'Breakfast', snack_am: 'Morning snack', lunch: 'Lunch', snack_pm: 'Afternoon snack', dinner: 'Dinner', snack: 'Evening snack' };
+export const MEAL_COLOR = { breakfast: '#E8890C', snack_am: '#8E5BD8', lunch: '#23843F', snack_pm: '#8E5BD8', dinner: '#1E73BE', snack: '#8E5BD8' };
 export const MUSCLE_LABEL = { chest: 'Chest', back: 'Back', legs: 'Legs', shoulders: 'Shoulders', arms: 'Arms', core: 'Core', cardio: 'Cardio', full_body: 'Full body' };
 export const MUSCLE_TINT = {
   chest: ['#E8F1FA', '#165A96'], back: ['#E6F4EA', '#1D6E35'], legs: ['#FDEFD9', '#8A4B00'], shoulders: ['#EFE7FB', '#5B36A0'],

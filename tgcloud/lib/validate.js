@@ -17,7 +17,7 @@ export const ENUMS = {
   category:      ['compound', 'isolation'],
   trackType:     ['weight_reps', 'bodyweight_reps', 'weighted_bodyweight', 'duration', 'distance_duration'],
   setType:       ['warmup', 'working', 'drop', 'failure'],
-  meal:          ['breakfast', 'lunch', 'dinner', 'snack'],
+  meal:          ['breakfast', 'snack_am', 'lunch', 'snack_pm', 'dinner', 'snack'],
   foodUnit:      ['g', 'ml', 'serving'],
   baseUnit:      ['g', 'ml'],
   pose:          ['front', 'side', 'back'],

@@ -9,11 +9,22 @@ import { Icon } from './icons.jsx';
 import { haptic, confirmDialog } from '../lib/tg.js';
 import { t, cname } from '../lib/i18n.js';
 
-// A function, not a constant: labels follow the current language. Short forms
-// ('Dinner@short') so four tabs fit on a phone in every language.
-export const mealOptions = () => ['breakfast', 'lunch', 'dinner', 'snack'].map((m) => ({ value: m, label: t(`${MEAL_LABEL[m]}@short`) }));
+// Meals on the top row, each snack under the meal it follows. Short forms
+// ('Dinner@short') so three columns fit on a phone in every language.
+const MEAL_GRID = ['breakfast', 'lunch', 'dinner', 'snack_am', 'snack_pm', 'snack'];
 
-// Breakfast before 11, lunch until 16, dinner until 21, otherwise snack.
+function MealPicker({ value, onChange }) {
+  return (
+    <div className="segmented meals" role="tablist" aria-label={t('Meal')}>
+      {MEAL_GRID.map((m) => (
+        <button key={m} type="button" role="tab" aria-selected={m === value} aria-label={t(MEAL_LABEL[m])}
+          onClick={() => { haptic.select(); onChange(m); }}>{t(m.startsWith('snack') ? 'Snack@short' : `${MEAL_LABEL[m]}@short`)}</button>
+      ))}
+    </div>
+  );
+}
+
+// Breakfast before 11, lunch until 16, dinner until 21, otherwise the evening snack.
 export function mealForNow() {
   const h = new Date().getHours();
   return h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 21 ? 'dinner' : 'snack';
@@ -129,7 +140,7 @@ export function FoodLogSheet({ open, onClose, food, log, date, meal: initialMeal
         </>
       ) : loaded === null && log?.foodId ? <p className="hint">{t('Loading…')}</p> : <p className="hint">{t('This food was removed. You can still delete the entry.')}</p>}
 
-      <Segmented label={t('Meal')} value={meal} onChange={setMeal} options={mealOptions()} />
+      <MealPicker value={meal} onChange={setMeal} />
       <div className="stack-sm" style={{ gap: 8 }}>
         {(base || isQuick) && <button type="button" className="btn lg block" disabled={busy || (base && !(qty > 0))} onClick={save}>{editing ? t('Save') : t('Add')}</button>}
         {editing && <button type="button" className="btn danger block" style={{ background: 'var(--field)' }} onClick={remove}>{t('Remove entry')}</button>}
@@ -166,7 +177,7 @@ export function QuickAddSheet({ open, onClose, date, meal: initialMeal, onSaved 
         <label className="form-row"><span className="label">{t('Carbs, g')}</span><NumberInput value={v.carbsG} placeholder="—" live onCommit={(x) => setV((cur) => ({ ...cur, carbsG: x }))} label={t('Carbs')} /></label>
         <label className="form-row"><span className="label">{t('Fat, g')}</span><NumberInput value={v.fatG} placeholder="—" live onCommit={(x) => setV((cur) => ({ ...cur, fatG: x }))} label={t('Fat')} /></label>
       </div>
-      <Segmented label={t('Meal')} value={meal} onChange={setMeal} options={mealOptions()} />
+      <MealPicker value={meal} onChange={setMeal} />
       <button type="button" className="btn lg block" disabled={busy || !(v.kcal > 0)} onClick={save}>{busy ? t('Saving…') : t('Add')}</button>
     </Sheet>
   );

@@ -270,7 +270,7 @@ export const foodLogs = table('food_logs', {
   id:        integer('id').primaryKey({ autoIncrement: true }),
   userId:    integer('user_id').notNull(),
   localDate: text('local_date').notNull(),
-  meal:      text('meal').notNull(),                         // 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  meal:      text('meal').notNull(),                         // 'breakfast' | 'snack_am' | 'lunch' | 'snack_pm' | 'dinner' | 'snack'
   foodId:    integer('food_id'),
   name:      text('name').notNull(),
   quantity:  real('quantity'),                               // as entered: 2 (servings), 200 (g)
