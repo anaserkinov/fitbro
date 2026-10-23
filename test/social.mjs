@@ -126,6 +126,7 @@ console.log('Friends: feed');
 const exercises = (await call(ALI, 'listExercises')).exercises;
 const exId = (name) => exercises.find((e) => e.name === name).id;
 // A finished workout: [[exercise, kg, reps, sets], …]
+const doWorkoutOn = (uid, items, date) => doWorkout(uid, items, { date });
 async function doWorkout(uid, items, { name, date } = {}) {
   let w = await call(uid, 'startWorkout', { ...(name ? { name } : {}), ...(date ? { date } : {}) });
   for (const [ex, , , count] of items) w = await call(uid, 'addWorkoutExercise', { workoutId: w.workout.id, exerciseId: exId(ex), sets: count });
@@ -607,6 +608,25 @@ console.log('Programs');
   assert.equal((await call(NU, 'getMyProgram')).program, null); ok('28 days without a session → the program ends');
   await fails(call(NU, 'leaveProgram'), 'NOT_FOUND'); ok('nothing to leave → NOT_FOUND');
   await fails(call(NU, 'enrollProgram', { code: 'nope' }), 'INVALID_INPUT'); ok('unknown program → INVALID_INPUT');
+
+  // Recommendations
+  const RU = 553;
+  await onboard(RU);
+  let l = await call(RU, 'listPrograms');
+  assert.deepEqual([l.needsProfile, l.recommended], [true, []]); ok('training questions not answered → needsProfile, nothing recommended');
+  await fails(call(RU, 'updateSettings', { equipment: 'garage' }), 'INVALID_INPUT');
+  await fails(call(RU, 'updateSettings', { sessionMinutes: 50 }), 'INVALID_INPUT'); ok('training answers validated');
+  await call(RU, 'updateSettings', { experience: 'new', equipment: 'gym', sessionMinutes: 45, workoutsPerWeek: 3 });
+  l = await call(RU, 'listPrograms');
+  assert.equal(l.needsProfile, false); assert.equal(l.recommended[0].code, 'full_body_beginner'); ok('beginner, 3 days, gym → beginner full body recommended');
+  for (let i = 0; i < 12; i++) await doWorkoutOn(RU, [['Back Squat', 100, 5, 3]], addDays(TODAY, -i * 7)), await doWorkoutOn(RU, [['Back Squat', 100, 5, 3]], addDays(TODAY, -i * 7));
+  await call(RU, 'updateSettings', { workoutsPerWeek: 4 });
+  l = await call(RU, 'listPrograms');
+  assert.equal(l.recommended[0].code, 'wendler_531'); assert.ok(l.recommended[0].reasons.some((x) => x.key === 'Your log shows steady training')); ok('12 steady weeks and a 1.4× squat → recommended as more than a beginner');
+  await call(RU, 'enrollProgram', { code: 'wendler_531' });
+  assert.deepEqual((await call(RU, 'listPrograms')).recommended, []); ok('following a program → no recommendations');
+  const me = (await call(RU, 'completeOnboarding', { sex: 'male', birthDate: '1995-01-01', heightCm: 180, weightKg: 80, activityLevel: 'moderate', goal: 'maintain' })).user;
+  assert.deepEqual([me.experience, me.equipment, me.sessionMinutes], ['new', 'gym', 45]); ok('re-running setup without the new fields keeps the answers');
 }
 
 
@@ -650,7 +670,7 @@ console.log('Friends: translations');
     'src/screens/Friends.jsx', 'src/screens/Group.jsx', 'src/screens/GroupSettings.jsx', 'src/screens/GroupInvite.jsx', 'src/screens/MemberRoutines.jsx',
     'src/lib/share-card.js', 'src/ui/ShareButton.jsx', 'src/screens/Progress.jsx', 'src/screens/WorkoutSummary.jsx', 'src/ui/Challenges.jsx', 'src/screens/Settings.jsx',
     'src/screens/Programs.jsx', 'src/screens/Train.jsx', 'src/screens/Home.jsx',
-    'tgcloud/lib/data/achievements.js', 'tgcloud/lib/data/programs.js', 'src/screens/Workout.jsx',
+    'tgcloud/lib/data/achievements.js', 'tgcloud/lib/data/programs.js', 'src/screens/Workout.jsx', 'src/ui/TrainingFields.jsx', 'src/screens/Onboarding.jsx',
   ];
   // Server errors from the friends modules are shown by both, so they must be shared.
   const ERROR_FILES = ['tgcloud/lib/groups.js', 'tgcloud/lib/activity.js', 'tgcloud/lib/challenges.js', 'tgcloud/lib/share.js', 'tgcloud/lib/own-chat.js', 'tgcloud/lib/export.js', 'tgcloud/lib/programs.js'];
@@ -675,6 +695,8 @@ console.log('Friends: translations');
   // Program names, descriptions and day names: routines get them from the bot's translator.
   const { PROGRAMS } = await import('../tgcloud/lib/data/programs.js');
   for (const p of PROGRAMS) for (const k of [p.name, p.about, ...p.days.map((d) => d.name)]) for (const l of ['ru', 'uz']) if (!(k in BOT_DICT[l]) || !(k in APP_DICT[l])) missing.push(`programs [${l}] ${k}`);
+  const { REASONS } = await import('../tgcloud/lib/recommend.js');
+  for (const k of Object.values(REASONS)) for (const l of ['ru', 'uz']) if (!(k in APP_DICT[l])) missing.push(`recommendation reason [${l}] ${k}`);
   assert.deepEqual(missing, []); ok('every friends string has ru and uz, in the dictionary its runtime loads');
 }
 console.log(`\nAll ${n} friends checks passed`);

@@ -7,6 +7,7 @@ import { today, latestWeightKg } from './users.js';
 import { daysBetween } from './dates.js';
 import { tr } from './i18n/bot.js';
 import { saveRoutine, saveSchedule, archiveRoutine } from './routines.js';
+import { recommendPrograms, trainingSignals } from './recommend.js';
 import {
   PROGRAMS, PROGRAM_BY_CODE, trainingMax, weekInfo, daysPerWeek, roundTo, guessKg, initialReps, fromOneRepMax,
 } from './data/programs.js';
@@ -108,9 +109,16 @@ async function currentEnrollment(user) {
   return { e, program, weekIndex, ...s };
 }
 
+// The catalogue plus, when not following one, the programs that fit the user best.
+// needsProfile: experience or equipment not answered yet, so nothing is recommended.
 export async function listPrograms(user) {
   const current = await currentEnrollment(user);
-  return { programs: PROGRAMS.map(describe), activeCode: current ? current.e.programCode : null, suggestedMaxes: await suggestedMaxes(user) };
+  const needsProfile = !user.experience || !user.equipment;
+  const recommended = current || needsProfile ? [] : recommendPrograms(user, await trainingSignals(user), PROGRAMS);
+  return {
+    programs: PROGRAMS.map(describe), activeCode: current ? current.e.programCode : null, suggestedMaxes: await suggestedMaxes(user),
+    recommended, needsProfile,
+  };
 }
 
 export async function getMyProgram(user) {

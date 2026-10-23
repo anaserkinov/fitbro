@@ -86,6 +86,35 @@ console.log('Programs (math)');
   assert.deepEqual(weekInfo(w531, 5), { week: 2, of: 4, cycle: 2, deload: false, finished: false }); ok('week info: fixed programs end, 5/3/1 cycles');
 }
 
+console.log('Program recommendations');
+{
+  const { recommendPrograms, inferLevel } = await import('../tgcloud/lib/recommend.js');
+  const { PROGRAMS } = await import('../tgcloud/lib/data/programs.js');
+  const none = { activeWeeks: 0, squatRatio: 0, benchRatio: 0 };
+  const rec = (profile, signals = none) => recommendPrograms({ goal: 'maintain', sessionMinutes: null, ...profile }, signals, PROGRAMS);
+  const codes = (r) => r.map((x) => x.code);
+  const keys = (r) => r.reasons.map((x) => x.key);
+
+  assert.equal(inferLevel(none), 'new'); assert.equal(inferLevel({ activeWeeks: 8, squatRatio: 0, benchRatio: 0 }), 'some');
+  assert.equal(inferLevel({ activeWeeks: 2, squatRatio: 1.1, benchRatio: 0 }), 'some'); assert.equal(inferLevel({ activeWeeks: 14, squatRatio: 1.6, benchRatio: 0 }), 'experienced');
+  assert.equal(inferLevel({ activeWeeks: 14, squatRatio: 1.2, benchRatio: 0.9 }), 'some'); ok('level from the log: active weeks and strength for body weight');
+
+  let r = rec({ experience: 'new', equipment: 'gym', workoutsPerWeek: 3, sessionMinutes: 45 });
+  assert.deepEqual(codes(r), ['full_body_beginner']); assert.deepEqual(keys(r[0]), ['Fits your {n} days a week', 'Made for beginners', 'Sessions fit in {n} min']);
+  assert.deepEqual(r[0].reasons[2].params, { n: 35 }); ok('beginner, 3 days, gym → beginner full body only (5/3/1 and PPL too advanced), with reasons');
+  r = rec({ experience: 'some', equipment: 'gym', workoutsPerWeek: 6, goal: 'bulk' });
+  assert.equal(codes(r)[0], 'ppl_12'); assert.ok(keys(r[0]).includes('Plenty of volume for building muscle')); ok('some experience, 6 days, bulk → PPL first');
+  r = rec({ experience: 'some', equipment: 'gym', workoutsPerWeek: 4 });
+  assert.deepEqual(codes(r), ['wendler_531', 'full_body_beginner']); ok('4 days → 5/3/1 (exact), beginner 3-day as a near fit');
+  r = rec({ experience: 'new', equipment: 'gym', workoutsPerWeek: 4 }, { activeWeeks: 14, squatRatio: 1.6, benchRatio: 1.2 });
+  assert.equal(codes(r)[0], 'wendler_531'); assert.ok(keys(r[0]).includes('Your log shows steady training')); ok('said beginner, log says experienced → recommended at the higher level, with why');
+  r = rec({ experience: 'experienced', equipment: 'gym', workoutsPerWeek: 4 });
+  assert.equal(codes(r)[0], 'wendler_531'); assert.ok(keys(r[0]).includes('For experienced lifters')); ok('no history never moves a user down');
+  assert.deepEqual(rec({ experience: 'new', equipment: 'dumbbells', workoutsPerWeek: 3 }), []); ok('nothing for dumbbells yet → empty, not a bad match');
+  assert.deepEqual(rec({ experience: null, equipment: 'gym', workoutsPerWeek: 3 }), []); ok('unanswered profile → no recommendation');
+  assert.deepEqual(rec({ experience: 'some', equipment: 'gym', workoutsPerWeek: 1 }), []); ok('no program within a day of the weekly target → none');
+}
+
 console.log('Catalog');
 let r = await catalog.seedCatalog(); assert.ok(r.exercisesAdded > 80 && r.foodsAdded > 60); ok(`seeded ${r.exercisesAdded} exercises, ${r.foodsAdded} foods`);
 r = await catalog.seedCatalog(); assert.deepEqual(r, { exercisesAdded: 0, foodsAdded: 0 }); ok('re-seed is a no-op');

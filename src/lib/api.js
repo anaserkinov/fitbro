@@ -91,12 +91,12 @@ export function invalidate(...names) {
 
 // Endpoints whose data changes after each kind of write.
 export const AFFECTS = {
-  workout: ['getWorkout', 'getToday', 'listWorkouts', 'getConsistency', 'getMuscleVolume', 'getExerciseHistory', 'listRoutines', 'listExercises', 'getGroup', 'getGroupFeed', 'getAchievements', 'listChallenges'],
+  workout: ['getWorkout', 'getToday', 'getMyProgram', 'listPrograms', 'listWorkouts', 'getConsistency', 'getMuscleVolume', 'getExerciseHistory', 'listRoutines', 'listExercises', 'getGroup', 'getGroupFeed', 'getAchievements', 'listChallenges'],
   food: ['getFoodDay', 'getToday', 'searchFoods', 'browseFoods'],
   body: ['getBody', 'getToday'],
   routines: ['listRoutines', 'getRoutine', 'getToday'],
   exercises: ['listExercises', 'getExerciseHistory'],
-  settings: ['getSettings', 'getToday', 'getMe', 'getFoodDay'],
+  settings: ['getSettings', 'getToday', 'getMe', 'getFoodDay', 'listPrograms'],
   groups: ['listGroups', 'getGroup', 'getGroupFeed', 'listChallenges'],
 };
 

@@ -23,7 +23,7 @@ The app converts to the user's `weightUnit` / `energyUnit` for display.
 | `getMe` | — | `{ user, onboarded, activeWorkoutId }` |
 | `completeOnboarding` | `sex, birthDate, heightCm, weightKg, activityLevel, goal` + optional `goalWeightKg, timezone, trainingSplit, workoutsPerWeek, weightUnit, energyUnit, …` | same as `getMe` |
 | `getSettings` | — | `{ user, reminders }` |
-| `updateSettings` | any of: profile fields, `kcalTarget, proteinTargetG, carbsTargetG, fatTargetG` (switches to manual), `targetsManual: false` (back to formula), `weightUnit, energyUnit, timezone, weekStartsOn, defaultRestSec, quietStart, quietEnd, waterTargetMl, workoutsPerWeek, goalWeightKg` | `{ user, reminders }` |
+| `updateSettings` | any of: profile fields, `kcalTarget, proteinTargetG, carbsTargetG, fatTargetG` (switches to manual), `targetsManual: false` (back to formula), `experience` (`new`/`some`/`experienced`), `equipment` (`gym`/`dumbbells`/`home`), `sessionMinutes` (30/45/60/90), `weightUnit, energyUnit, timezone, weekStartsOn, defaultRestSec, quietStart, quietEnd, waterTargetMl, workoutsPerWeek, goalWeightKg` | `{ user, reminders }` |
 | `updateReminder` | `type` + any of `enabled, times: ['HH:MM'], weekdays: [1–7], params: { days }` | `{ reminder }` |
 | `deleteMyData` | `{ confirm: 'DELETE' }` | `{ deleted: true }` |
 
@@ -137,7 +137,7 @@ volume `{ volumeKg, sets }`; strength `{ bodyWeightKg, lifts: [{ exercise, e1rmK
 |---|---|---|
 | `prepareShare` | `workoutId` (finished), `imageBase64` (the card, PNG/JPEG) | `{ id }` for `Telegram.WebApp.shareMessage(id)` (Bot API 8.0+) |
 | `getAchievements` | — | `{ achievements: [{ code, earnedAt }], earnedCount }` — catalogue in `lib/data/achievements.js` |
-| `listPrograms` | — | `{ programs, activeCode, suggestedMaxes }` (5/3/1 1RMs from the last 90 days) |
+| `listPrograms` | — | `{ programs, activeCode, suggestedMaxes, recommended, needsProfile }` — `suggestedMaxes`: 5/3/1 1RMs from the last 90 days; `recommended`: up to 3 `{ code, score, reasons: [{ key, params }] }` (translation keys) when not in a program; `needsProfile`: `experience`/`equipment` not answered |
 | `enrollProgram` | `code` + `oneRepMaxes?: { ohp, deadlift, bench, squat }` (kg, 5/3/1) | same as `getMyProgram` — creates the routines and **replaces the weekly schedule** |
 | `getMyProgram` | — | `{ program, enrollment, weekIndex, week, of, cycle, deload, sessionsDone, sessionsThisWeek, daysPerWeek, routines }` or `{ program: null, lastEnded }` |
 | `leaveProgram` | — | `{ left: true }` — routines archived, schedule days cleared, workouts kept |

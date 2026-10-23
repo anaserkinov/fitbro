@@ -9,6 +9,8 @@ export const ENUMS = {
   activityLevel: ['light', 'moderate', 'active'],
   goal:          ['cut', 'maintain', 'bulk'],
   trainingSplit: ['ppl', 'upper_lower', 'full_body', 'custom'],
+  experience:    ['new', 'some', 'experienced'],
+  gymAccess:     ['gym', 'dumbbells', 'home'],
   weightUnit:    ['kg', 'lb'],
   energyUnit:    ['kcal', 'kj'],
   language:      ['en', 'ru', 'uz'],

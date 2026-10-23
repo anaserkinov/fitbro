@@ -7,6 +7,7 @@ import { haptic, confirmDialog, requestWriteAccess } from '../lib/tg.js';
 import { t } from '../lib/i18n.js';
 import { LANGUAGES, LANGUAGE_NAMES } from '../../tgcloud/lib/i18n/core.js';
 import { unitLabel } from '../../tgcloud/lib/units.js';
+import TrainingFields, { trainingSummary } from '../ui/TrainingFields.jsx';
 
 const GOAL_LABEL = { cut: 'Losing fat', maintain: 'Maintaining', bulk: 'Building muscle' };
 const REMINDERS = {
@@ -167,6 +168,7 @@ export default function Settings() {
                 <Row icon="flame" iconColor="#E8890C" title={t('Calories & macros')} value={fmt.e(user.kcalTarget)} chevron onClick={() => setSheet('targets')} />
                 <Row icon="target" iconColor="#8E5BD8" title={t('Goal weight')} value={user.goalWeightKg ? fmt.w(user.goalWeightKg) : t('Not set')} chevron onClick={() => setSheet('goalWeight')} />
                 <Row icon="dumbbell" iconColor="#1E73BE" title={t('Workouts per week')} value={user.workoutsPerWeek} chevron onClick={() => setSheet('perWeek')} />
+                <Row icon="calendar" iconColor="#23843F" title={t('Training')} value={trainingSummary(user) || t('Not set')} chevron onClick={() => setSheet('training')} />
                 <Row icon="droplet" iconColor="#1E9BD7" title={t('Water per day')} value={`${fmt.n(user.waterTargetMl / 1000, 1)} ${t('L')}`} chevron onClick={() => setSheet('water')} />
               </List>
             </Section>
@@ -232,6 +234,10 @@ export default function Settings() {
       </Sheet>
       <Sheet open={sheet === 'perWeek'} onClose={close} title={t('Workouts per week')}>
         <Segmented label={t('Workouts per week')} value={user.workoutsPerWeek} onChange={(v) => saveQuiet({ workoutsPerWeek: v }).then(close)} options={[1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: n, label: String(n) }))} />
+      </Sheet>
+      <Sheet open={sheet === 'training'} onClose={close} title={t('Training')}>
+        <TrainingFields value={user} onChange={(patch) => saveQuiet(patch)} />
+        <p className="small hint">{t('Programs are recommended from these answers and your workout log.')}</p>
       </Sheet>
       <Sheet open={sheet === 'water'} onClose={close} title={t('Water per day')}>
         <Segmented label={t('Water target')} value={user.waterTargetMl} onChange={(v) => saveQuiet({ waterTargetMl: v }).then(close)} options={[1500, 2000, 2500, 3000, 3500, 4000].map((ml) => ({ value: ml, label: fmt.n(ml / 1000, ml % 1000 ? 1 : 0) }))} />

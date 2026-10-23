@@ -133,6 +133,7 @@ export const PROGRAMS = [
     name: 'Beginner full body',
     about: 'Three full-body sessions a week. Add weight every time you hit all your reps.',
     weeks: 8,
+    levels: ['new'], equipment: ['gym'], volume: 'moderate',   // who it suits (lib/recommend.js)
     schedule: { 1: 0, 3: 1, 5: 0 },   // weekday → day index
     days: [
       { name: 'Full body A', exercises: [
@@ -154,6 +155,7 @@ export const PROGRAMS = [
     name: 'Push Pull Legs',
     about: 'Six days a week for 12 weeks. Work up through each rep range, then add weight. Every 4th week is lighter.',
     weeks: 12,
+    levels: ['some', 'experienced'], equipment: ['gym'], volume: 'high',
     schedule: { 1: 0, 2: 1, 3: 2, 4: 0, 5: 1, 6: 2 },
     deloadEvery: 4,
     days: [
@@ -192,6 +194,7 @@ export const PROGRAMS = [
     weeks: null,   // repeats until you leave
     cycleWeeks: 4,
     needsMaxes: ['ohp', 'deadlift', 'bench', 'squat'],
+    levels: ['some', 'experienced'], equipment: ['gym'], volume: 'moderate',
     schedule: { 1: 0, 2: 1, 4: 2, 5: 3 },
     days: [
       { name: 'Overhead press day', exercises: [
@@ -257,6 +260,9 @@ export function describeChange(c, t, w) {
 export const PROGRAM_BY_CODE = Object.fromEntries(PROGRAMS.map((p) => [p.code, p]));
 
 export const daysPerWeek = (program) => Object.keys(program.schedule).length;
+
+// Rough length of the longest day: 10 min to warm up, then ~2.5 min per set with rest.
+export const sessionMinutes = (program) => Math.max(...program.days.map((d) => 10 + d.exercises.reduce((n, ex) => n + (ex.sets || 3) * 2.5, 0)));
 
 // Where a program stands in a given program week (0-based).
 export function weekInfo(program, weekIndex) {

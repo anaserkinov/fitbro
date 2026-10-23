@@ -6,6 +6,7 @@ import { computeTargets } from '../../tgcloud/lib/nutrition.js';
 import { localDate, isValidTimezone } from '../../tgcloud/lib/dates.js';
 import { Segmented, MainButton, NumberInput, toast, toastError } from '../ui/kit.jsx';
 import { Icon } from '../ui/icons.jsx';
+import TrainingFields from '../ui/TrainingFields.jsx';
 import { haptic } from '../lib/tg.js';
 import { t } from '../lib/i18n.js';
 import { LANGUAGES, LANGUAGE_NAMES } from '../../tgcloud/lib/i18n/core.js';
@@ -94,6 +95,9 @@ export default function Onboarding({ edit = false }) {
     activityLevel: user.activityLevel || 'moderate',
     goalWeightKg: user.goalWeightKg || null,
     workoutsPerWeek: user.workoutsPerWeek || 4,
+    experience: user.experience || null,
+    equipment: user.equipment || null,
+    sessionMinutes: user.sessionMinutes || null,
   }));
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
 
@@ -128,6 +132,7 @@ export default function Onboarding({ edit = false }) {
         sex: f.sex, birthDate: f.birthDate, heightCm: f.heightCm, weightKg: f.weightKg,
         activityLevel: f.activityLevel, goal: f.goal, workoutsPerWeek: f.workoutsPerWeek,
         goalWeightKg: f.goalWeightKg || null, weightUnit: f.weightUnit, energyUnit: f.energyUnit,
+        experience: f.experience, equipment: f.equipment, sessionMinutes: f.sessionMinutes,
         ...(edit ? {} : { timezone: tz }),
       });
       haptic.success();
@@ -235,7 +240,7 @@ export default function Onboarding({ edit = false }) {
 
       {step === 3 && (
         <>
-          <Heading title={t('Your plan')} sub={t('Optional — helps the app show your pace and weekly progress.')} />
+          <Heading title={t('Your plan')} sub={t('Optional — helps the app show your pace and pick a training program for you.')} />
           <div className="card">
             <label className="form-row">
               <span className="label">{t('Goal weight, {unit}', { unit: fmt.weightLabel })}</span>
@@ -249,6 +254,7 @@ export default function Onboarding({ edit = false }) {
                 ))}
               </div>
             </div>
+            <TrainingFields value={f} onChange={set} />
           </div>
         </>
       )}

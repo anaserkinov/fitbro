@@ -4,6 +4,7 @@ import { useUser, useNav } from '../lib/app-state.jsx';
 import { Loader, Section, List, Row, Sheet, NumberInput, toastError } from '../ui/kit.jsx';
 import { haptic, confirmDialog } from '../lib/tg.js';
 import { t, cname } from '../lib/i18n.js';
+import TrainingFields from '../ui/TrainingFields.jsx';
 
 // Built-in multi-week programs: what you're following and the catalogue to enrol in.
 
@@ -55,6 +56,56 @@ function EnrollSheet({ program, suggested, onClose }) {
   );
 }
 
+// The three questions recommendations need, asked right here for users who skipped them.
+function ProfileSheet({ onClose }) {
+  const { user, setUser } = useUser();
+  const [f, setF] = useState({ experience: user.experience, equipment: user.equipment, sessionMinutes: user.sessionMinutes });
+  const [busy, setBusy] = useState(false);
+  async function save() {
+    setBusy(true);
+    try {
+      const r = await call('updateSettings', f);
+      setUser(r.user);
+      haptic.success();
+      invalidate(...AFFECTS.settings);
+      onClose();
+    } catch (e) { toastError(e); } finally { setBusy(false); }
+  }
+  return (
+    <Sheet open onClose={onClose} title={t('Find a program')}>
+      <div className="stack" style={{ padding: '0 16px 16px' }}>
+        <TrainingFields value={f} onChange={(patch) => setF((x) => ({ ...x, ...patch }))} />
+        <button type="button" className="btn lg block" disabled={busy || !f.experience || !f.equipment} onClick={save}>{t('Show programs for me')}</button>
+      </div>
+    </Sheet>
+  );
+}
+
+function Recommended({ list, onPick, onProfile }) {
+  if (list.needsProfile) {
+    return (
+      <Section title={t('Recommended for you')}>
+        <List>
+          <Row icon="target" iconColor="#8E5BD8" title={t('Find the right program')} sub={t('Answer 3 quick questions')} chevron onClick={onProfile} />
+        </List>
+      </Section>
+    );
+  }
+  const byCode = Object.fromEntries(list.programs.map((p) => [p.code, p]));
+  return (
+    <Section title={t('Recommended for you')}
+      footer={list.recommended.length ? t('Picked from your answers and your workout log.') : t('Nothing fits your answers yet — more programs, including dumbbell and home training, are on the way.')}>
+      <List>
+        {list.recommended.map((r, i) => (
+          <Row key={r.code} icon={i === 0 ? 'trophy' : 'dumbbell'} iconColor={i === 0 ? '#E8A400' : '#E8890C'} title={t(byCode[r.code].name)}
+            sub={r.reasons.map((x) => t(x.key, x.params)).join(' · ')} chevron onClick={() => onPick(byCode[r.code])} />
+        ))}
+        <Row title={t('Change my answers')} chevron onClick={onProfile} />
+      </List>
+    </Section>
+  );
+}
+
 function Current({ my }) {
   const nav = useNav();
   async function leave() {
@@ -85,13 +136,16 @@ export default function Programs() {
   const my = useApi('getMyProgram');
   const list = useApi('listPrograms');
   const [enrolling, setEnrolling] = useState(null);
+  const [profile, setProfile] = useState(false);
   return (
     <div className="screen sub">
       <h1 className="title" style={{ padding: '0 4px' }}>{t('Programs')}</h1>
       <Loader q={my}>{(m) => (m.program ? <Current my={m} /> : null)}</Loader>
       <Loader q={list}>
         {(l) => (
-          <Section title={t('Programs')} footer={t('Each workout is pre-filled with that week’s sets and weights. A week moves on once its sessions are done, and weights follow how your sets go.')}>
+          <>
+          {!l.activeCode && <Recommended list={l} onPick={setEnrolling} onProfile={() => setProfile(true)} />}
+          <Section title={t('All programs')} footer={t('Each workout is pre-filled with that week’s sets and weights. A week moves on once its sessions are done, and weights follow how your sets go.')}>
             <List>
               {l.programs.map((p) => (
                 <Row key={p.code} icon="dumbbell" iconColor="#E8890C" title={t(p.name)}
@@ -101,8 +155,10 @@ export default function Programs() {
               ))}
             </List>
           </Section>
+          </>
         )}
       </Loader>
+      {profile && <ProfileSheet onClose={() => setProfile(false)} />}
       {enrolling && <EnrollSheet program={enrolling} suggested={list.data.suggestedMaxes} onClose={() => setEnrolling(null)} />}
     </div>
   );

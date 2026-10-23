@@ -217,6 +217,14 @@ Phase A shipped with these deviations from the decisions above. Where they disag
 
 ---
 
+## Phase B implementation notes (2026-10-23)
+
+- **Where the questions are asked (U5):** the three training questions go in onboarding's existing optional "Your plan" step, not a new step. Settings has a Training row that opens the same fields (`src/ui/TrainingFields.jsx`), and Programs asks them in a sheet. All three are optional everywhere.
+- **Scoring (KTD11):** a program needs to be within ±1 day of the weekly target and not above the user's level. The "finished this program before" bonus is dropped, because the data can't tell finishing a program from leaving it. Session length is a rough estimate: 10 min, plus 2.5 min per set.
+- **Equipment:** `users.equipment` is validated against a new `gymAccess` enum, because `ENUMS.equipment` already names exercise equipment.
+
+---
+
 ## Implementation Units
 
 | U-ID | Title | Key files | Depends on |

@@ -33,6 +33,9 @@ export const users = table('users', {
   activityLevel:   text('activity_level'),                   // 'light' | 'moderate' | 'active'
   goal:            text('goal'),                             // 'cut' | 'maintain' | 'bulk'
   trainingSplit:   text('training_split'),                   // 'ppl' | 'upper_lower' | 'full_body' | 'custom'
+  experience:      text('experience'),                       // 'new' | 'some' | 'experienced' — for program recommendations
+  equipment:       text('equipment'),                        // 'gym' | 'dumbbells' | 'home'
+  sessionMinutes:  integer('session_minutes'),               // 30 | 45 | 60 | 90
 
   // Targets
   kcalTarget:      integer('kcal_target'),
