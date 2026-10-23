@@ -7,6 +7,7 @@ import { Sheet, Chips, Spinner, Empty, toastError } from './kit.jsx';
 import { Icon } from './icons.jsx';
 import { haptic } from '../lib/tg.js';
 import { t, cname } from '../lib/i18n.js';
+import { exerciseGuide } from '../lib/exercise-guides.js';
 
 const FILTER_MUSCLES = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'cardio'];
 const filters = (muscles) => [{ value: 'all', label: t('All') }, ...muscles.map((m) => ({ value: m, label: t(MUSCLE_LABEL[m]) }))];
@@ -14,8 +15,11 @@ const filters = (muscles) => [{ value: 'all', label: t('All') }, ...muscles.map(
 // Equipment / category values are lower-case keys: t('barbell') → 'штанга'.
 export const exerciseMeta = (e, extra = []) => [t(MUSCLE_LABEL[e.muscle]), e.equipment && t(e.equipment), ...extra].filter(Boolean).join(' · ');
 
-export function MuscleBadge({ muscle }) {
+// With `name`: the built-in exercise's start-position photo when it has one.
+export function MuscleBadge({ muscle, name }) {
   const [bg, ink] = MUSCLE_TINT[muscle] || MUSCLE_TINT.full_body;
+  const photo = name && exerciseGuide(name)?.photos[0];
+  if (photo) return <img src={photo} alt="" loading="lazy" style={{ width: 36, height: 36, borderRadius: 9, objectFit: 'cover', flex: 'none', background: bg }} />;
   return (
     <span style={{ width: 36, height: 36, borderRadius: 9, background: bg, color: ink, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flex: 'none' }} aria-hidden="true">
       {t(MUSCLE_LABEL[muscle]).slice(0, 2)}
@@ -124,7 +128,7 @@ export default function ExercisePicker({ open, onClose, onPick, title }) {
             <div className="list">
               {rows.map((e) => (
                 <button key={e.id} type="button" className="row" style={{ minHeight: 56, '--inset': '64px' }} onClick={() => { haptic.tap(); onPick(e); }}>
-                  <MuscleBadge muscle={e.muscle} />
+                  <MuscleBadge muscle={e.muscle} name={e.name} />
                   <span className="grow">
                     <span className="row-title">{cname(e.name)}</span>
                     <span className="sub">{exerciseMeta(e, [e.timesUsed && t('used {n}×', { n: e.timesUsed })])}</span>

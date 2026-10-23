@@ -53,7 +53,7 @@ function Strength() {
         <div className="list">
           {used.map((e) => (
             <button key={e.id} type="button" className="row" style={{ minHeight: 56, '--inset': '64px' }} onClick={() => { haptic.select(); setExerciseId(e.id); setPicking(false); }}>
-              <MuscleBadge muscle={e.muscle} />
+              <MuscleBadge muscle={e.muscle} name={e.name} />
               <span className="grow"><span className="row-title">{cname(e.name)}</span><span className="sub">{t.n(e.timesUsed, '{n} session', '{n} sessions')}</span></span>
               {e.id === current.id && <Icon name="check" size={18} color="var(--link)" stroke={2.6} />}
             </button>

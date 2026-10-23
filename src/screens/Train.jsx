@@ -113,7 +113,7 @@ function Exercises() {
           <div className="list">
             {rows.map((e) => (
               <button key={e.id} type="button" className="row" style={{ minHeight: 56, '--inset': '64px' }} onClick={() => nav.push('ExerciseDetail', { id: e.id })}>
-                <MuscleBadge muscle={e.muscle} />
+                <MuscleBadge muscle={e.muscle} name={e.name} />
                 <span className="grow">
                   <span className="row-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="ellipsis">{cname(e.name)}</span>{e.custom && <span className="badge gray">{t('Custom')}</span>}</span>
                   <span className="sub">{exerciseMeta(e, [e.category && t(e.category)])}</span>

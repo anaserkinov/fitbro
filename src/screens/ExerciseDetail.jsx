@@ -6,6 +6,8 @@ import { Loader, Section, List, Row, Empty } from '../ui/kit.jsx';
 import { LineChart } from '../ui/charts.jsx';
 import { tg, inTelegram } from '../lib/tg.js';
 import { t, cname } from '../lib/i18n.js';
+import { exerciseGuide } from '../lib/exercise-guides.js';
+import { GuidePhotos, GuideCues } from '../ui/ExerciseGuide.jsx';
 
 // English labels (translation keys) — wrap with t() at display.
 export const EQUIPMENT_LABEL = { barbell: 'Barbell', dumbbell: 'Dumbbell', machine: 'Machine', cable: 'Cable', bodyweight: 'Bodyweight', kettlebell: 'Kettlebell', band: 'Band', other: 'Other' };
@@ -100,6 +102,7 @@ export default function ExerciseDetail({ id }) {
   const nav = useNav();
   const [weeks, setWeeks] = useState(12);
   const q = useApi('getExerciseHistory', { exerciseId: id, weeks });
+  const guide = q.data && q.data.exercise.userId === 0 ? exerciseGuide(q.data.exercise.name) : null;
   return (
     <div className="screen sub">
       <Loader q={q}>
@@ -112,6 +115,14 @@ export default function ExerciseDetail({ id }) {
               </div>
               {h.exercise.userId !== 0 && <button type="button" className="btn ghost" onClick={() => nav.push('ExerciseEditor', { id })}>{t('Edit')}</button>}
             </div>
+            {guide && (
+              <Section title={t('How to do it')}>
+                <div className="card">
+                  <GuidePhotos photos={guide.photos} />
+                  <GuideCues cues={guide.cues} />
+                </div>
+              </Section>
+            )}
             {(h.exercise.notes || h.exercise.link) && (
               <div className="card">
                 {h.exercise.notes && <p style={{ whiteSpace: 'pre-line' }}>{h.exercise.notes}</p>}

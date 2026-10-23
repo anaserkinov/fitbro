@@ -7,6 +7,8 @@ import { workoutName } from '../lib/workout-start.js';
 import { t, cname } from '../lib/i18n.js';
 import { Loader, MainButton, NumberInput, Sheet, List, Row, Stepper, toast, toastError } from '../ui/kit.jsx';
 import ExercisePicker from '../ui/ExercisePicker.jsx';
+import { GuideSheet, GuideThumb } from '../ui/ExerciseGuide.jsx';
+import { exerciseGuide } from '../lib/exercise-guides.js';
 import { Icon } from '../ui/icons.jsx';
 import { haptic, confirmDialog } from '../lib/tg.js';
 import { blocks, nextOpenSet } from '../../tgcloud/lib/supersets.js';
@@ -166,6 +168,7 @@ export default function Workout({ id }) {
   const [picker, setPicker] = useState(false);
   const [setMenu, setSetMenu] = useState(null);     // { set, ex }
   const [exMenu, setExMenu] = useState(null);       // exercise entry
+  const [guide, setGuide] = useState(null);         // exercise name
   const [restTotal, setRestTotal] = useState(user.defaultRestSec);
   const [finishing, setFinishing] = useState(false);
   const open = q.data?.workout && !q.data.workout.endedAt;
@@ -279,6 +282,7 @@ export default function Workout({ id }) {
                 return (
                   <div key={e.id} className="ex-card">
                     <div className="ex-head">
+                      <GuideThumb name={e.exercise.name} onOpen={() => setGuide(e.exercise.name)} />
                       <button type="button" style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 0, padding: 0 }} onClick={() => nav.push('ExerciseDetail', { id: e.exercise.id })}>
                         <div className="bold ellipsis" style={{ fontSize: 17 }}>{cname(e.exercise.name)}</div>
                         <div className="small hint ellipsis">
@@ -357,6 +361,11 @@ export default function Workout({ id }) {
                   </List>
                 ) : exMenu && (
                   <>
+                    {exerciseGuide(exMenu.exercise.name) && (
+                      <List>
+                        <Row title={t('How to do it')} chevron onClick={() => { const name = exMenu.exercise.name; setExMenu(null); setGuide(name); }} />
+                      </List>
+                    )}
                     <div className="stack-sm">
                       <span className="label">{t('Rest between sets')}</span>
                       <Stepper value={(exMenu.restSec || 0) / 60} step={0.25} decimals={2} unit={t('min')} label={t('rest')}
@@ -384,6 +393,8 @@ export default function Workout({ id }) {
                   </>
                 )}
               </Sheet>
+
+              <GuideSheet name={guide} onClose={() => setGuide(null)} />
 
               {open && <MainButton text={t('Finish workout')} busy={finishing} onClick={finish} />}
             </>

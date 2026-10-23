@@ -7,12 +7,13 @@ import account from '../i18n/account.js';
 import workout from '../i18n/workout.js';
 import food from '../i18n/food.js';
 import progress from '../i18n/progress.js';
+import guides from '../i18n/guides.js';
 
 // The Mini App's translator. One module-level language, set from the signed-in user
 // by UserProvider before each render — so call t() at render time, never in a
 // module-level constant. See docs/i18n.md.
 
-const DICT = mergeDicts(shared, common, account, workout, food, progress);
+const DICT = mergeDicts(shared, common, account, workout, food, progress, guides);
 
 let current = translator(pickLanguage(telegramUser?.language_code), DICT);
 
