@@ -6,7 +6,7 @@ export default {
     'Step {n} of {total}': 'Шаг {n} из {total}',
     'Hi!': 'Привет!',
     'Hi, {name}!': 'Привет, {name}!',
-    'FitPro tracks your workouts, food and body in one place. A few questions to set your daily targets.': 'FitPro следит за тренировками, питанием и формой — всё в одном месте. Пара вопросов, и посчитаю твои дневные нормы.',
+    'FitBro tracks your workouts, food and body in one place. A few questions to set your daily targets.': 'FitBro следит за тренировками, питанием и формой — всё в одном месте. Пара вопросов, и посчитаю твои дневные нормы.',
     'Language': 'Язык',
     'Units': 'Единицы',
     'Weight': 'Вес',
@@ -65,7 +65,7 @@ export default {
     'Goal weight': 'Целевой вес',
     'Optional': 'Необязательно',
     'Workouts per week': 'Тренировок в неделю',
-    'Start using FitPro': 'Погнали!',
+    'Start using FitBro': 'Погнали!',
     'Continue': 'Дальше',
     'Please fill in all fields': 'Заполни все поля',
     'Profile updated': 'Профиль обновлён',
@@ -129,7 +129,7 @@ export default {
     'Delete ALL your data — workouts, food, weight, photos, settings? This cannot be undone.': 'Удалить ВСЕ твои данные — тренировки, питание, вес, фото, настройки? Вернуть уже не получится.',
     'Are you sure? Everything will be permanently deleted.': 'Точно? Всё удалится навсегда.',
     'All data deleted': 'Все данные удалены',
-    'FitPro · your data stays in this bot.': 'FitPro · твои данные остаются в этом боте.',
+    'FitBro · your data stays in this bot.': 'FitBro · твои данные остаются в этом боте.',
 
     // Home
     '{n}-day logging streak': 'Серия: {n} дн. подряд',
@@ -168,7 +168,7 @@ export default {
     'Step {n} of {total}': '{total} dan {n}-qadam',
     'Hi!': 'Salom!',
     'Hi, {name}!': 'Salom, {name}!',
-    'FitPro tracks your workouts, food and body in one place. A few questions to set your daily targets.': 'FitPro mashg‘ulot, ovqat va tana holatini bir joyda kuzatib boradi. Bir nechta savolga javob bering — kunlik me’yoringizni hisoblab beraman.',
+    'FitBro tracks your workouts, food and body in one place. A few questions to set your daily targets.': 'FitBro mashg‘ulot, ovqat va tana holatini bir joyda kuzatib boradi. Bir nechta savolga javob bering — kunlik me’yoringizni hisoblab beraman.',
     'Language': 'Til',
     'Units': 'O‘lchov birliklari',
     'Weight': 'Vazn',
@@ -226,7 +226,7 @@ export default {
     'Goal weight': 'Maqsad vazn',
     'Optional': 'Ixtiyoriy',
     'Workouts per week': 'Haftasiga mashg‘ulotlar',
-    'Start using FitPro': 'Boshladik!',
+    'Start using FitBro': 'Boshladik!',
     'Continue': 'Davom etish',
     'Please fill in all fields': 'Iltimos, hamma maydonlarni to‘ldiring',
     'Profile updated': 'Profil yangilandi',
@@ -290,7 +290,7 @@ export default {
     'Delete ALL your data — workouts, food, weight, photos, settings? This cannot be undone.': 'BARCHA ma’lumotlaringiz — mashg‘ulotlar, ovqat, vazn, suratlar, sozlamalar o‘chirilsinmi? Keyin qaytarib bo‘lmaydi.',
     'Are you sure? Everything will be permanently deleted.': 'Aniqmi? Hammasi butunlay o‘chib ketadi.',
     'All data deleted': 'Barcha ma’lumotlar o‘chirildi',
-    'FitPro · your data stays in this bot.': 'FitPro · ma’lumotlaringiz shu botda qoladi.',
+    'FitBro · your data stays in this bot.': 'FitBro · ma’lumotlaringiz shu botda qoladi.',
 
     // Home
     '{n}-day logging streak': 'Ketma-ket {n} kun',

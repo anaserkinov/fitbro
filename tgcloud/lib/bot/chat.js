@@ -41,7 +41,7 @@ export async function start(user, chatId, payload = '') {
       console.warn('setChatMenuButton failed', e.description || e.message);
     }
   }
-  const hello = user.firstName ? t('Hey, {name}! I’m FitPro 💪', { name: esc(user.firstName) }) : t('Hey! I’m FitPro 💪');
+  const hello = user.firstName ? t('Hey, {name}! I’m FitBro 💪', { name: esc(user.firstName) }) : t('Hey! I’m FitBro 💪');
   const sample = user.language === 'en' ? '82.4' : '82,4';
   await send(chatId, [
     hello,
@@ -55,14 +55,14 @@ export async function start(user, chatId, payload = '') {
     t('Send a photo to save it as a progress photo. Food logging, routines and charts live in the app.'),
   ].join('\n'), { reply_markup: mainKeyboard(user) });
   return send(chatId, user.onboardedAt ? t('Everything else is in the app:') : t('Start with a one-minute setup so I can set your daily targets:'),
-    { reply_markup: inline([[appButton(`📱 ${user.onboardedAt ? t('Open FitPro') : t('Set up FitPro')}`)]]) });
+    { reply_markup: inline([[appButton(`📱 ${user.onboardedAt ? t('Open FitBro') : t('Set up FitBro')}`)]]) });
 }
 
 export function help(user, chatId) {
   const t = tr(user);
   const sample = user.language === 'en' ? '82.4' : '82,4';
   return send(chatId, t('Tap a button below, send your weight (like {sample}) or a photo. Everything else is in the app.', { sample: `<code>${sample}</code>` }),
-    { reply_markup: inline([[appButton(`📱 ${t('Open FitPro')}`)]]) });
+    { reply_markup: inline([[appButton(`📱 ${t('Open FitBro')}`)]]) });
 }
 
 // After the language changes in the app: a fresh keyboard and menu button.
@@ -105,7 +105,7 @@ export async function todaySummary(user, chatId) {
   const startBtn = d.activeWorkout
     ? { text: `▶️ ${t('Continue workout')}`, callback_data: 'w:show' }
     : d.plan && !d.plan.done ? { text: `▶️ ${t('Start {name}', { name: d.plan.name })}`, callback_data: `w:go:${d.plan.routineId}` } : null;
-  return send(chatId, lines.join('\n'), { reply_markup: inline([[startBtn], [appButton(`📱 ${t('Open FitPro')}`)]]) });
+  return send(chatId, lines.join('\n'), { reply_markup: inline([[startBtn], [appButton(`📱 ${t('Open FitBro')}`)]]) });
 }
 
 // ── ⚖️ Weight ───────────────────────────────────────────────────────────────────

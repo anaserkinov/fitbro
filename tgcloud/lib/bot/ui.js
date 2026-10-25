@@ -66,5 +66,5 @@ export async function edit(chatId, messageId, text, extra = {}) {
 
 export function needsSetup(user, chatId) {
   const t = tr(user);
-  return send(chatId, t('First, a one-minute setup so I can set your daily targets 👇'), { reply_markup: inline([[appButton(`📱 ${t('Set up FitPro')}`)]]) });
+  return send(chatId, t('First, a one-minute setup so I can set your daily targets 👇'), { reply_markup: inline([[appButton(`📱 ${t('Set up FitBro')}`)]]) });
 }

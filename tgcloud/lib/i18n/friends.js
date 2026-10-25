@@ -27,9 +27,9 @@ export default {
     'Challenge not found': 'Челлендж не найден',
     'You can export once an hour — try again a bit later': 'Выгружать можно раз в час — попробуй чуть позже',
     'There is nothing to export yet': 'Пока нечего выгружать',
-    'Your FitPro data': 'Твои данные из FitPro',
+    'Your FitBro data': 'Твои данные из FitBro',
     'Open the bot chat first so I can send you files': 'Сначала открой чат с ботом, чтобы я мог присылать тебе файлы',
-    'Tracked with FitPro': 'Записано в FitPro',
+    'Tracked with FitBro': 'Записано в FitBro',
 
     // Invites and groups in chat
     '{n} members': ['{n} участник', '{n} участника', '{n} участников'],
@@ -44,12 +44,12 @@ export default {
     '{group}: #{rank} of {n} in consistency': '{group}: #{rank} из {n} по регулярности',
 
     // Linked group chats
-    'This chat now has a FitPro group: {name}.': 'У этого чата теперь есть группа в FitPro: {name}.',
+    'This chat now has a FitBro group: {name}.': 'У этого чата теперь есть группа в FitBro: {name}.',
     'Tap Join to compare workouts with each other. Each of you chooses what the group sees.': 'Нажми «Вступить», чтобы сравнивать тренировки друг с другом. Каждый сам решает, что видит группа.',
-    'To link this chat to a FitPro group, a chat admin who uses FitPro needs to add me.': 'Чтобы привязать чат к группе в FitPro, меня должен добавить админ чата, который пользуется FitPro.',
+    'To link this chat to a FitBro group, a chat admin who uses FitBro needs to add me.': 'Чтобы привязать чат к группе в FitBro, меня должен добавить админ чата, который пользуется FitBro.',
     'this week': 'эта неделя',
-    'Nobody is shown here yet. Turn on “Show me in chat posts” in the group’s settings in FitPro.': 'Здесь пока никого нет. Включи «Показывать меня в чате» в настройках группы в FitPro.',
-    'Open in FitPro': 'Открыть в FitPro',
+    'Nobody is shown here yet. Turn on “Show me in chat posts” in the group’s settings in FitBro.': 'Здесь пока никого нет. Включи «Показывать меня в чате» в настройках группы в FitBro.',
+    'Open in FitBro': 'Открыть в FitBro',
     'Show me in chat posts': 'Показывать меня в чате',
 
     // Pings
@@ -164,9 +164,9 @@ export default {
     'Challenge not found': 'Chellenj topilmadi',
     'You can export once an hour — try again a bit later': 'Soatiga bir marta yuklab olish mumkin — birozdan keyin urinib ko‘ring',
     'There is nothing to export yet': 'Hozircha yuklab olinadigan narsa yo‘q',
-    'Your FitPro data': 'FitPro’dagi ma’lumotlaringiz',
+    'Your FitBro data': 'FitBro’dagi ma’lumotlaringiz',
     'Open the bot chat first so I can send you files': 'Fayl yubora olishim uchun avval bot chatini oching',
-    'Tracked with FitPro': 'FitPro’da yozib borildi',
+    'Tracked with FitBro': 'FitBro’da yozib borildi',
 
     '{n} members': '{n} ta a’zo',
     '{name} invited you to compare workouts.': '{name} sizni mashg‘ulotlarni solishtirishga taklif qildi.',
@@ -179,12 +179,12 @@ export default {
     'Joined': 'Tayyor',
     '{group}: #{rank} of {n} in consistency': '{group}: muntazamlikda {n} tadan #{rank}',
 
-    'This chat now has a FitPro group: {name}.': 'Endi bu chatning FitPro’da guruhi bor: {name}.',
+    'This chat now has a FitBro group: {name}.': 'Endi bu chatning FitBro’da guruhi bor: {name}.',
     'Tap Join to compare workouts with each other. Each of you chooses what the group sees.': 'Mashg‘ulotlarni bir-biringiz bilan solishtirish uchun «Qo‘shilish»ni bosing. Guruh nimani ko‘rishini har kim o‘zi tanlaydi.',
-    'To link this chat to a FitPro group, a chat admin who uses FitPro needs to add me.': 'Bu chatni FitPro guruhiga bog‘lash uchun meni FitPro’dan foydalanadigan chat admini qo‘shishi kerak.',
+    'To link this chat to a FitBro group, a chat admin who uses FitBro needs to add me.': 'Bu chatni FitBro guruhiga bog‘lash uchun meni FitBro’dan foydalanadigan chat admini qo‘shishi kerak.',
     'this week': 'bu hafta',
-    'Nobody is shown here yet. Turn on “Show me in chat posts” in the group’s settings in FitPro.': 'Bu yerda hozircha hech kim yo‘q. FitPro’dagi guruh sozlamalarida «Meni chatda ko‘rsatish»ni yoqing.',
-    'Open in FitPro': 'FitPro’da ochish',
+    'Nobody is shown here yet. Turn on “Show me in chat posts” in the group’s settings in FitBro.': 'Bu yerda hozircha hech kim yo‘q. FitBro’dagi guruh sozlamalarida «Meni chatda ko‘rsatish»ni yoqing.',
+    'Open in FitBro': 'FitBro’da ochish',
     'Show me in chat posts': 'Meni chatda ko‘rsatish',
 
     '{name} finished {workout}': '{name} «{workout}» mashg‘ulotini tugatdi',

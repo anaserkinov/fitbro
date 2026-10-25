@@ -209,7 +209,7 @@ export default function Settings() {
               </List>
             </Section>
             <button type="button" className="btn danger block" onClick={deleteAll}>{t('Delete all my data')}</button>
-            <p className="center tiny hint">{t('FitPro · your data stays in this bot.')}</p>
+            <p className="center tiny hint">{t('FitBro · your data stays in this bot.')}</p>
           </>
         )}
       </Loader>

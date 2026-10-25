@@ -10,7 +10,7 @@ const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 // resolve to the test shims, so the real endpoints run locally on in-memory SQLite.
 function sdkResolver() {
   return {
-    name: 'fitpro-sdk',
+    name: 'fitbro-sdk',
     enforce: 'pre',
     resolveId(id, _importer, opts) {
       if (id !== 'sdk' && id !== 'sdk/db') return null;
@@ -28,7 +28,7 @@ function devApi() {
   let ready = null;
   const files = new Map();   // fake Telegram file storage for progress photos
   return {
-    name: 'fitpro-dev-api',
+    name: 'fitbro-dev-api',
     apply: 'serve',
     configureServer(server) {
       const setup = async () => {

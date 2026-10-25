@@ -11,8 +11,8 @@ import { computeLeaderboard } from '../leaderboard.js';
 import { startLink, startAppLink, inviteParam } from '../links.js';
 import { send, esc } from './ui.js';
 
-// Telegram group chats as FitPro groups. Adding the bot to a chat links a group to it
-// (when the person who added it is a set-up FitPro user, a chat admin and under the
+// Telegram group chats as FitBro groups. Adding the bot to a chat links a group to it
+// (when the person who added it is a set-up FitBro user, a chat admin and under the
 // group limit). Chat members join with an explicit tap. The chat gets a weekly
 // leaderboard and /leaderboard — listing only members who turned on "show me in chat
 // posts". Bot privacy mode stays on, so the bot only sees commands here.
@@ -32,15 +32,15 @@ const button = (text, url) => (url ? { inline_keyboard: [[{ text, url }]] } : un
 async function postJoin(chatId, group, owner) {
   const t = tr(owner);
   await send(chatId, [
-    `👥 ${t('This chat now has a FitPro group: {name}.', { name: `<b>${esc(group.name)}</b>` })}`,
+    `👥 ${t('This chat now has a FitBro group: {name}.', { name: `<b>${esc(group.name)}</b>` })}`,
     t('Tap Join to compare workouts with each other. Each of you chooses what the group sees.'),
   ].join('\n'), { reply_markup: { inline_keyboard: [[{ text: `✅ ${t('Join')}`, callback_data: `g:join:${group.inviteCode}` }]] } });
 }
 
 async function postSetup(chatId, from) {
   const t = tr(from);
-  await send(chatId, t('To link this chat to a FitPro group, a chat admin who uses FitPro needs to add me.'),
-    { reply_markup: button(`📱 ${t('Open FitPro')}`, await startLink('chat')) });
+  await send(chatId, t('To link this chat to a FitBro group, a chat admin who uses FitBro needs to add me.'),
+    { reply_markup: button(`📱 ${t('Open FitBro')}`, await startLink('chat')) });
 }
 
 async function isChatAdmin(chatId, userId) {
@@ -74,11 +74,11 @@ export async function onBotMembership(update) {
   const adder = await ensureUser(from);
   const mine = await db.$count(T.groupMembers, eq(T.groupMembers.userId, adder.id));
   if (!adder.onboardedAt || mine >= MAX_GROUPS_PER_USER || !(await isChatAdmin(chat.id, adder.id))) return postSetup(chat.id, adder);
-  const { group } = await insertGroup(adder, String(chat.title || 'FitPro').slice(0, 40), { chatId: chat.id, nextPostAt: nextPostAt(adder) });
+  const { group } = await insertGroup(adder, String(chat.title || 'FitBro').slice(0, 40), { chatId: chat.id, nextPostAt: nextPostAt(adder) });
   return postJoin(chat.id, group, adder);
 }
 
-// The Join button in a group chat. Joining needs a FitPro account and a private chat
+// The Join button in a group chat. Joining needs a FitBro account and a private chat
 // with the bot (for pings) — otherwise the button opens the bot to set that up.
 export async function onGroupJoin(query, code) {
   const user = await ensureUser(query.from);
@@ -101,7 +101,7 @@ export async function leaderboardText(group, owner) {
   const board = (await computeLeaderboard(group.id, 0, today(owner))).consistency.filter((r) => shown.has(r.userId));
   const lines = [`📊 <b>${esc(group.name)}</b> — ${t('this week')}`];
   if (!board.length) {
-    lines.push('', t('Nobody is shown here yet. Turn on “Show me in chat posts” in the group’s settings in FitPro.'));
+    lines.push('', t('Nobody is shown here yet. Turn on “Show me in chat posts” in the group’s settings in FitBro.'));
   } else {
     board.forEach((r, i) => lines.push(`${i + 1}. ${esc(r.name || t('Member'))} — ${r.done}/${r.goal}${r.streakWeeks ? ` · 🔥${r.streakWeeks}` : ''}`));
   }
@@ -110,7 +110,7 @@ export async function leaderboardText(group, owner) {
 
 async function postLeaderboard(chatId, group, owner) {
   const t = tr(owner);
-  await send(chatId, await leaderboardText(group, owner), { reply_markup: button(`👥 ${t('Open in FitPro')}`, await startAppLink(inviteParam(group.inviteCode))) });
+  await send(chatId, await leaderboardText(group, owner), { reply_markup: button(`👥 ${t('Open in FitBro')}`, await startAppLink(inviteParam(group.inviteCode))) });
 }
 
 // handlers/message for group chats: /leaderboard, and a chat upgraded to a supergroup.

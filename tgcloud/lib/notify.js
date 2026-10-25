@@ -27,7 +27,7 @@ const MUSCLE = { chest: 'Chest', back: 'Back', legs: 'Legs', shoulders: 'Shoulde
 
 function openApp(user, path = '') {
   if (!MINI_APP_URL) return {};
-  return { reply_markup: { inline_keyboard: [[{ text: tr(user)('Open FitPro'), web_app: { url: MINI_APP_URL + path } }]] } };
+  return { reply_markup: { inline_keyboard: [[{ text: tr(user)('Open FitBro'), web_app: { url: MINI_APP_URL + path } }]] } };
 }
 
 async function composeReminder(r, user, now) {

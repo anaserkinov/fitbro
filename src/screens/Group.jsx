@@ -17,7 +17,7 @@ const REACTIONS = ['👏', '🔥', '💪'];
 const LIFT_LABEL = { 'Barbell Bench Press': 'Bench', 'Back Squat': 'Squat', 'Deadlift': 'Deadlift' };
 
 export function invite(group) {
-  if (group.inviteLink) shareLink(group.inviteLink, t('Join my group “{name}” on FitPro — let’s compare our training.', { name: group.name }));
+  if (group.inviteLink) shareLink(group.inviteLink, t('Join my group “{name}” on FitBro — let’s compare our training.', { name: group.name }));
 }
 
 const nameOf = (row, userId) => (row.userId === userId ? t('You') : row.name || t('Member'));

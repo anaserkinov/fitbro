@@ -12,7 +12,7 @@ execution: code
 
 ## Goal Capsule
 
-- **Objective:** Add a social layer to FitPro: groups joined by invite link, fair leaderboards, an activity feed with reactions and bot pings. Add the features that build on it: a shareable workout card, copying a friend's routine, achievements and streaks, and group challenges. Add two standalone utilities: CSV export and multi-week programs. Telegram group chats come last, as linked groups.
+- **Objective:** Add a social layer to FitBro: groups joined by invite link, fair leaderboards, an activity feed with reactions and bot pings. Add the features that build on it: a shareable workout card, copying a friend's routine, achievements and streaks, and group challenges. Add two standalone utilities: CSV export and multi-week programs. Telegram group chats come last, as linked groups.
 - **Authority:** This plan, then `AGENTS.md` (module rules, no foreign keys, `.deprecated()` drops, i18n), then `docs/i18n.md` (voice and glossary), then existing code conventions in `tgcloud/lib/`.
 - **Execution profile:** Phased. Each phase (A to E) ships and deploys independently. Within a phase, follow unit dependency order.
 - **Stop conditions:** Stop and ask if a Telegram API behaves differently from what this plan assumes (see Risks). Also stop if a unit needs a foreign key, a column type change or a destructive migration, or if a privacy default would need to change.
@@ -28,7 +28,7 @@ Users create groups in the Mini App and invite friends with a Telegram link. Eac
 
 ### Problem Frame
 
-FitPro is a single-player tracker. Every table is scoped to one `user_id`, there are no deep links, and nothing can be shared out of the app. Training with friends is one of the strongest retention drivers in fitness apps, and Telegram is where those friends already are. The data a fair comparison needs already exists: `workouts.total_volume_kg`, `workouts.total_sets`, `sets.e1rm_kg`, the append-only `personal_records`, and `users.workouts_per_week`. Nothing exposes it across users. Two gaps users expect from a tracker also remain: getting their data out, and following a structured multi-week program instead of a static weekly schedule.
+FitBro is a single-player tracker. Every table is scoped to one `user_id`, there are no deep links, and nothing can be shared out of the app. Training with friends is one of the strongest retention drivers in fitness apps, and Telegram is where those friends already are. The data a fair comparison needs already exists: `workouts.total_volume_kg`, `workouts.total_sets`, `sets.e1rm_kg`, the append-only `personal_records`, and `users.workouts_per_week`. Nothing exposes it across users. Two gaps users expect from a tracker also remain: getting their data out, and following a structured multi-week program instead of a static weekly schedule.
 
 ### Requirements
 
@@ -47,7 +47,7 @@ FitPro is a single-player tracker. Every table is scoped to one `user_id`, there
 - R9. The existing weekly summary message includes the user's standing in each of their groups.
 
 **Sharing**
-- R10. From the workout summary or history, a user can share an image card of a finished workout to any Telegram chat. The card has a button that opens FitPro.
+- R10. From the workout summary or history, a user can share an image card of a finished workout to any Telegram chat. The card has a button that opens FitBro.
 - R11. A member can browse a groupmate's routines (when that member shares routines) and copy one into their own library.
 
 **Engagement**
@@ -62,7 +62,7 @@ FitPro is a single-player tracker. Every table is scoped to one `user_id`, there
 - R18. A user can leave a program. Its routines are archived and workout history is kept.
 
 **Telegram group chats**
-- R19. Adding the bot to a Telegram group chat creates (or links) a FitPro group for that chat. Chat members join it with one tap.
+- R19. Adding the bot to a Telegram group chat creates (or links) a FitBro group for that chat. Chat members join it with one tap.
 - R20. A linked chat gets a weekly leaderboard post and responds to a `/leaderboard` command. Posts list only members who turned on "show me in chat posts" for that group.
 
 **Cross-cutting**
@@ -72,7 +72,7 @@ FitPro is a single-player tracker. Every table is scoped to one `user_id`, there
 
 ### Acceptance Examples
 
-- AE1. Covers R2. **Given** a user who has never opened FitPro taps `t.me/<bot>?startapp=g_ab12cd`, **when** they finish onboarding, **then** they see that group's preview. They become a member only after tapping Join.
+- AE1. Covers R2. **Given** a user who has never opened FitBro taps `t.me/<bot>?startapp=g_ab12cd`, **when** they finish onboarding, **then** they see that group's preview. They become a member only after tapping Join.
 - AE6. Covers R3. **Given** the owner removed Dan from "Gym", **when** Dan opens the same invite link, **then** joining is refused. After the owner resets the link, Dan can join with the new one.
 - AE7. Covers R24. **Given** Eve joins "Gym" on Wednesday, **when** she opens the feed, **then** she sees only items from Wednesday onward. Her own items from before Wednesday don't appear for other members either.
 - AE2. Covers R4, R6, R23. **Given** Ali shares weight in "Gym" but not in "Office", **when** Office members load the leaderboard, **then** Ali is missing from relative strength there but still appears in consistency and volume.
@@ -483,14 +483,14 @@ Ship phases in order A → B → C → D → E. Each phase gets its own schema m
 
 ### U7. Share workout card
 
-**Goal:** A finished workout can be shared to any chat as an image card with an "Open FitPro" button.
+**Goal:** A finished workout can be shared to any chat as an image card with an "Open FitBro" button.
 
 **Requirements:** R10, R21
 
 **Dependencies:** U1, U2 (`BOT_USERNAME` and the `startapp` link helper)
 
 **Files:**
-- Create `src/lib/share-card.js`: draws the card on a canvas (workout name, date, duration, sets, volume, up to 3 PRs, FitPro mark), themed light, at 1080×1350, and returns base64 PNG.
+- Create `src/lib/share-card.js`: draws the card on a canvas (workout name, date, duration, sets, volume, up to 3 PRs, FitBro mark), themed light, at 1080×1350, and returns base64 PNG.
 - Create `tgcloud/lib/share.js` and endpoint `tgcloud/endpoints/prepareShare.js`: validate ownership of a finished workout, upload the image to get a `file_id`, delete the message, then call `savePreparedInlineMessage` and return `{ id }`.
 - Modify `src/screens/WorkoutSummary.jsx` and the workout detail in `src/screens/History.jsx`: add a Share button, shown only when `tg.isVersionAtLeast('8.0')`.
 - Modify `src/i18n/workout.js`.
@@ -688,7 +688,7 @@ Ship phases in order A → B → C → D → E. Each phase gets its own schema m
 
 ### U13. Telegram group chats as linked groups
 
-**Goal:** Adding the bot to a group chat creates or links a FitPro group, which members join by button and which gets weekly leaderboard posts.
+**Goal:** Adding the bot to a group chat creates or links a FitBro group, which members join by button and which gets weekly leaderboard posts.
 
 **Requirements:** R19, R20, R21
 

@@ -15,7 +15,7 @@ const call = async (userId, name, input = {}) => {
 };
 const fails = (p, code) => assert.rejects(p, (e) => (e.parameters && e.parameters.code) === code);
 let n = 0; const ok = (name) => { n++; console.log('  ✓', name); };
-globalThis.fakeApi = { getMe: () => ({ username: 'fitpro_bot' }) };
+globalThis.fakeApi = { getMe: () => ({ username: 'fitbro_bot' }) };
 
 const onboard = (uid) => call(uid, 'completeOnboarding', { sex: 'male', birthDate: '1995-01-01', heightCm: 180, weightKg: 80, activityLevel: 'moderate', goal: 'maintain', timezone: 'UTC' });
 for (const uid of [501, 502, 503, 504, 505]) await onboard(uid);
@@ -24,7 +24,7 @@ const ALI = 501, BO = 502, CAI = 503, DAN = 504, EVE = 505;
 console.log('\nFriends: groups');
 await fails(call(506, 'createGroup', { name: 'X' }), 'NOT_ONBOARDED'); ok('groups need onboarding');
 let gym = (await call(ALI, 'createGroup', { name: 'Gym' })).group;
-assert.equal(gym.role, 'owner'); assert.equal(gym.memberCount, 1); assert.match(gym.inviteLink, /^https:\/\/t\.me\/fitpro_bot\?startapp=g_[a-z0-9]{8}$/); ok('create: owner + invite link');
+assert.equal(gym.role, 'owner'); assert.equal(gym.memberCount, 1); assert.match(gym.inviteLink, /^https:\/\/t\.me\/fitbro_bot\?startapp=g_[a-z0-9]{8}$/); ok('create: owner + invite link');
 const code = gym.inviteLink.split('g_')[1];
 
 let pv = await call(BO, 'previewGroup', { code });
@@ -356,8 +356,8 @@ console.log('Sharing: workout card');
   assert.deepEqual(globalThis.apiCalls.map((c) => c[0]).filter((m) => m !== 'getMe'), ['sendPhoto', 'deleteMessage', 'savePreparedInlineMessage']);   // getMe is cached
   const prep = globalThis.apiCalls.find((c) => c[0] === 'savePreparedInlineMessage')[1];
   assert.equal(prep.user_id, BO); assert.equal(prep.result.type, 'photo'); assert.equal(prep.result.photo_file_id, 'card');
-  assert.match(prep.result.caption, /^💪 Push Day — .* · 3 sets · 1,200 kg\nTracked with FitPro$/);
-  assert.equal(prep.result.reply_markup.inline_keyboard[0][0].url, 'https://t.me/fitpro_bot?startapp=ref'); ok('share: upload → file_id → prepared message with an Open FitPro link');
+  assert.match(prep.result.caption, /^💪 Push Day — .* · 3 sets · 1,200 kg\nTracked with FitBro$/);
+  assert.equal(prep.result.reply_markup.inline_keyboard[0][0].url, 'https://t.me/fitbro_bot?startapp=ref'); ok('share: upload → file_id → prepared message with an Open FitBro link');
   await fails(call(ALI, 'prepareShare', { workoutId: done.workout.id, imageBase64: png }), 'NOT_FOUND'); ok("can't share someone else's workout");
   const openW = await call(BO, 'startWorkout', {});
   await fails(call(BO, 'prepareShare', { workoutId: openW.workout.id, imageBase64: png }), 'NOT_FINISHED');
@@ -478,7 +478,7 @@ console.log('Export');
   await onboard(XP);
   const decode = (f) => new TextDecoder('utf-8', { ignoreBOM: true }).decode(f.bytes);   // keep the BOM visible
   globalThis.apiCalls = [];
-  assert.deepEqual(await call(XP, 'exportData'), { files: ['fitpro-weight.csv'] });
+  assert.deepEqual(await call(XP, 'exportData'), { files: ['fitbro-weight.csv'] });
   const docCall = globalThis.apiCalls.find((c) => c[0] === 'sendDocument');
   assert.ok(docCall && !globalThis.apiCalls.some((c) => c[0] === 'sendMediaGroup'));
   assert.equal(decode(docCall[1].document), '﻿date,weight_kg\r\n' + `${TODAY},80\r\n`); ok('only body weight (right after onboarding) → one sendDocument, BOM, kg');
@@ -490,7 +490,7 @@ console.log('Export');
   await call(XP, 'updateSet', { id: xw.exercises[0].sets[0].id, weightKg: 20, reps: 10, completed: true });
   await call(XP, 'finishWorkout', { id: xw.workout.id });
   globalThis.apiCalls = [];
-  assert.deepEqual((await call(XP, 'exportData')).files, ['fitpro-workouts.csv', 'fitpro-weight.csv']);
+  assert.deepEqual((await call(XP, 'exportData')).files, ['fitbro-workouts.csv', 'fitbro-weight.csv']);
   const group = globalThis.apiCalls.find((c) => c[0] === 'sendMediaGroup')[1];
   assert.equal(group.media.length, 2); assert.equal(group.media[0].type, 'document'); assert.ok(group.media[1].caption && !group.media[0].caption);
   assert.match(decode(group.media[0].media), /\r\n\d{4}-\d{2}-\d{2},Arms,"'=HYPERLINK\(""x""\)",working,20,10,/); ok('workouts + weight → one media group of 2 documents; formula-looking names neutralised');

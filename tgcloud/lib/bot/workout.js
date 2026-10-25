@@ -98,7 +98,7 @@ export async function showCard(user, chatId, workoutId, { messageId = null, note
   if (!card) {
     // Tapped on an old card after the workout was finished or discarded elsewhere.
     const t = tr(user);
-    if (messageId) await edit(chatId, messageId, t('This workout is already finished — see it in the app.'), { reply_markup: inline([[appButton(`📱 ${t('Open FitPro')}`)]]) });
+    if (messageId) await edit(chatId, messageId, t('This workout is already finished — see it in the app.'), { reply_markup: inline([[appButton(`📱 ${t('Open FitBro')}`)]]) });
     return null;
   }
   if (messageId) return edit(chatId, messageId, card.text, { reply_markup: card.reply_markup });

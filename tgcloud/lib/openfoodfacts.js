@@ -10,7 +10,7 @@ import * as v from './validate.js';
 const OFF_URL = 'https://world.openfoodfacts.org/api/v2/product/';
 const FIELDS = 'product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,product_quantity_unit';
 // OFF asks every app to identify itself.
-const USER_AGENT = 'FitPro/0.1 (Telegram bot)';
+const USER_AGENT = 'FitBro/0.1 (Telegram bot)';
 
 export function cleanBarcode(raw) {
   const code = String(raw ?? '').replace(/\s+/g, '');

@@ -20,7 +20,7 @@ export async function prepareShare(user, input) {
   // Built here from the stored workout, not taken from the client.
   const parts = [formatDuration(w.durationSec), t.n(w.totalSets || 0, '{n} set', '{n} sets')];
   if (w.totalVolumeKg) parts.push(formatWeight(w.totalVolumeKg, user.weightUnit, { digits: 0, lang: user.language }));
-  const caption = `💪 ${w.name} — ${parts.join(' · ')}\n${t('Tracked with FitPro')}`;
+  const caption = `💪 ${w.name} — ${parts.join(' · ')}\n${t('Tracked with FitBro')}`;
 
   const sizes = await uploadToOwnChat(user, image, { name: 'workout', caption });
   const link = await startAppLink('ref');
@@ -31,7 +31,7 @@ export async function prepareShare(user, input) {
       id: `w${w.id}-${Date.now()}`,
       photo_file_id: sizes[sizes.length - 1].file_id,
       caption,
-      ...(link ? { reply_markup: { inline_keyboard: [[{ text: `📱 ${t('Open FitPro')}`, url: link }]] } } : {}),
+      ...(link ? { reply_markup: { inline_keyboard: [[{ text: `📱 ${t('Open FitBro')}`, url: link }]] } } : {}),
     },
     allow_user_chats: true,
     allow_bot_chats: true,

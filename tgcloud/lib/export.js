@@ -59,10 +59,10 @@ async function measurementsCsv(user) {
 }
 
 const FILES = [
-  ['fitpro-workouts.csv', workoutsCsv],
-  ['fitpro-food.csv', foodCsv],
-  ['fitpro-weight.csv', weightCsv],
-  ['fitpro-measurements.csv', measurementsCsv],
+  ['fitbro-workouts.csv', workoutsCsv],
+  ['fitbro-food.csv', foodCsv],
+  ['fitbro-weight.csv', weightCsv],
+  ['fitbro-measurements.csv', measurementsCsv],
 ];
 
 export async function exportData(user) {
@@ -77,7 +77,7 @@ export async function exportData(user) {
   }
   if (!files.length) v.refuse('There is nothing to export yet', 'NOTHING_TO_EXPORT');
 
-  const caption = `📦 ${tr(user)('Your FitPro data')}`;
+  const caption = `📦 ${tr(user)('Your FitBro data')}`;
   const doc = (f) => new InputFile(f.bytes, f.name, { type: 'text/csv' });
   await toOwnChat(() => (files.length === 1
     ? api.sendDocument({ chat_id: user.id, document: doc(files[0]), caption })

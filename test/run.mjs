@@ -241,7 +241,7 @@ const banana = await db.select().from(T.foods).where(eq(T.foods.name, 'Banana'))
 assert.equal(nutrition.nutrientsFor(banana, nutrition.gramsFor(banana, 1, 'serving')).kcal, 105); ok('1 medium banana = 105 kcal');
 assert.throws(() => nutrition.gramsFor(banana, 100, 'ml'), /measured in g/); ok('unit mismatch rejected');
 let calls = 0;
-globalThis.fakeFetch = async (url, opts) => { calls++; assert.match(opts.headers['User-Agent'], /FitPro/); return { ok: true, status: 200, json: async () => ({ status: 1, product: { product_name: 'Protein Bar Choco', brands: 'Acme, Acme EU', serving_quantity: '60', serving_size: '1 bar (60 g)', nutriments: { 'energy-kj_100g': 1590, proteins_100g: 33, carbohydrates_100g: 35, fat_100g: 12 } } }) }; };
+globalThis.fakeFetch = async (url, opts) => { calls++; assert.match(opts.headers['User-Agent'], /FitBro/); return { ok: true, status: 200, json: async () => ({ status: 1, product: { product_name: 'Protein Bar Choco', brands: 'Acme, Acme EU', serving_quantity: '60', serving_size: '1 bar (60 g)', nutriments: { 'energy-kj_100g': 1590, proteins_100g: 33, carbohydrates_100g: 35, fat_100g: 12 } } }) }; };
 const bar = await off.lookupBarcode('4006381333931'); assert.equal(bar.kcalPer100, 380); assert.equal(bar.brand, 'Acme'); assert.equal(bar.servingGrams, 60);
 await off.lookupBarcode('4006381333931'); assert.equal(calls, 1); ok('barcode fetched once then cached (kJ → kcal)');
 globalThis.fakeFetch = async () => ({ ok: false, status: 404 }); assert.equal(await off.lookupBarcode('12345678'), null); ok('unknown barcode → null');

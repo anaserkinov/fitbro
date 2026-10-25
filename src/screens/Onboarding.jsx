@@ -155,7 +155,7 @@ export default function Onboarding({ edit = false }) {
 
       {step === 0 && (
         <>
-          <Heading title={user.firstName ? t('Hi, {name}!', { name: user.firstName }) : t('Hi!')} sub={t('FitPro tracks your workouts, food and body in one place. A few questions to set your daily targets.')} />
+          <Heading title={user.firstName ? t('Hi, {name}!', { name: user.firstName }) : t('Hi!')} sub={t('FitBro tracks your workouts, food and body in one place. A few questions to set your daily targets.')} />
           <section className="section">
             <div className="section-title">{t('Language')}</div>
             <LanguagePicker />
@@ -259,7 +259,7 @@ export default function Onboarding({ edit = false }) {
         </>
       )}
 
-      <MainButton text={step === 3 ? (edit ? t('Save') : t('Start using FitPro')) : t('Continue')} disabled={!valid} busy={busy} onClick={next} />
+      <MainButton text={step === 3 ? (edit ? t('Save') : t('Start using FitBro')) : t('Continue')} disabled={!valid} busy={busy} onClick={next} />
     </div>
   );
 }

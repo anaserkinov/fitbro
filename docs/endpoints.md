@@ -1,4 +1,4 @@
-# FitPro — Mini App endpoints
+# FitBro — Mini App endpoints
 
 Call with `call(name, input)` from `src/lib/api.js`. Every call goes to the single
 `api` endpoint — `Telegram.WebApp.Serverless.call('api', { fn: name, input }, …)` — because

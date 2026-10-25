@@ -23,7 +23,7 @@ export function drawWorkoutCard({ workout, prs = [], fmt }) {
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#FFFFFF'; ctx.textBaseline = 'top';
 
-  fit(ctx, 'FitPro', 400, 44); ctx.globalAlpha = 0.85; ctx.fillText('💪 FitPro', 80, 80); ctx.globalAlpha = 1;
+  fit(ctx, 'FitBro', 400, 44); ctx.globalAlpha = 0.85; ctx.fillText('💪 FitBro', 80, 80); ctx.globalAlpha = 1;
 
   const name = workoutName(workout.name);
   fit(ctx, name, W - 160, 96); ctx.fillText(name, 80, 200);
@@ -53,6 +53,6 @@ export function drawWorkoutCard({ workout, prs = [], fmt }) {
     });
   }
 
-  fit(ctx, t('Tracked with FitPro'), W - 160, 36, 500); ctx.globalAlpha = 0.7; ctx.fillText(t('Tracked with FitPro'), 80, H - 120); ctx.globalAlpha = 1;
+  fit(ctx, t('Tracked with FitBro'), W - 160, 36, 500); ctx.globalAlpha = 0.7; ctx.fillText(t('Tracked with FitBro'), 80, H - 120); ctx.globalAlpha = 1;
   return canvas.toDataURL('image/png').split(',')[1];
 }

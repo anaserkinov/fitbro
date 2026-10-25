@@ -1,6 +1,6 @@
 import { table, integer, text, real, boolean, json, index, uniqueIndex, primaryKey, sql } from 'sdk/db';
 
-// FitPro schema.
+// FitBro schema.
 //
 // Conventions
 // - users.id IS the Telegram user id. Every other table carries `user_id` so access

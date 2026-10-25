@@ -18,7 +18,7 @@ export default {
     'Leaderboards and challenges with your groups': 'Рейтинги и челленджи с твоими группами',
 
     // Group
-    'Join my group “{name}” on FitPro — let’s compare our training.': 'Вступай в мою группу «{name}» в FitPro — будем сравнивать тренировки.',
+    'Join my group “{name}” on FitBro — let’s compare our training.': 'Вступай в мою группу «{name}» в FitBro — будем сравнивать тренировки.',
     'Member': 'Участник',
     'Leaderboard': 'Рейтинг',
     'Members who share their body weight show up here, ranked by strength for their size.': 'Здесь появятся те, кто делится своим весом, — по силе относительно веса тела.',
@@ -167,7 +167,7 @@ export default {
     'Train together — compare your week with friends': 'Birga shug‘ullaning — haftangizni do‘stlar bilan solishtiring',
     'Leaderboards and challenges with your groups': 'Guruhlaringiz bilan reytinglar va chellenjlar',
 
-    'Join my group “{name}” on FitPro — let’s compare our training.': 'FitPro’dagi «{name}» guruhimga qo‘shiling — mashg‘ulotlarimizni solishtiramiz.',
+    'Join my group “{name}” on FitBro — let’s compare our training.': 'FitBro’dagi «{name}» guruhimga qo‘shiling — mashg‘ulotlarimizni solishtiramiz.',
     'Member': 'A’zo',
     'Leaderboard': 'Reyting',
     'Members who share their body weight show up here, ranked by strength for their size.': 'Bu yerda vaznini ulashgan a’zolar tana vazniga nisbatan kuch bo‘yicha chiqadi.',

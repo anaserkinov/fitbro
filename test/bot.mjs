@@ -34,7 +34,7 @@ let n = 0; const ok = (name) => { n++; console.log('  ✓', name); };
 console.log('\nChat bot');
 reset(); await say('/start');
 assert.match(sent()[0].text, /Hey, Chat/); assert.ok(sent()[0].reply_markup.keyboard); assert.equal(sent().length, 2);
-assert.equal(buttons(sent()[1])[0].text, '📱 Set up FitPro'); ok('/start: welcome, 4-button keyboard, setup button');
+assert.equal(buttons(sent()[1])[0].text, '📱 Set up FitBro'); ok('/start: welcome, 4-button keyboard, setup button');
 assert.equal(calls().filter((c) => c[0] === 'setChatMenuButton').length, 1); ok('menu button opens the app');
 reset(); await say('82.4'); assert.match(last().text, /one-minute setup/); ok('nothing works before setup — points to the app');
 
@@ -101,7 +101,7 @@ const sayAs = (u, text) => onMessage({ message_id: ++msgId, from: u, chat: { id:
 const endpointAs = async (u, name, input) => (await endpointFn(name))(input, { initData: { user: u } });
 reset(); await sayAs(ru, '/start');
 assert.match(sent()[0].text, /Привет, Аня!/); assert.equal(sent()[0].reply_markup.keyboard[0][1].text, '📊 Сегодня');
-assert.equal(buttons(sent()[1])[0].text, '📱 Настроить FitPro'); ok('Telegram language ru → Russian welcome and keyboard');
+assert.equal(buttons(sent()[1])[0].text, '📱 Настроить FitBro'); ok('Telegram language ru → Russian welcome and keyboard');
 await endpointAs(ru, 'completeOnboarding', { sex: 'female', birthDate: '1998-05-01', heightCm: 165, weightKg: 60, activityLevel: 'moderate', goal: 'cut', timezone: 'UTC' });
 reset(); await sayAs(ru, '62,5'); assert.match(last().text, /Записал <b>62,5 кг<\/b>/); assert.equal(buttons(last())[0].text, '↩️ Отменить'); ok('ru: weight with decimal comma and кг');
 reset(); await endpointAs(ru, 'updateSettings', { language: 'uz' });
